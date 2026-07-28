@@ -60,11 +60,16 @@ function VerifyOtpContent() {
       setLoading(false);
       setVerifiedSuccess(true);
       setTimeout(() => {
-        const isOwner = email.includes('suraj') || email.includes('itxsuraj') || email.includes('admin');
-        if (isOwner) {
-          router.push('/dashboard');
+        const redirectTarget = searchParams.get('redirect');
+        if (redirectTarget) {
+          router.push(redirectTarget);
         } else {
-          router.push('/tools');
+          const isOwner = email.includes('suraj') || email.includes('itxsuraj') || email.includes('admin');
+          if (isOwner) {
+            router.push('/dashboard');
+          } else {
+            router.push('/tools');
+          }
         }
       }, 800);
     }, 600);

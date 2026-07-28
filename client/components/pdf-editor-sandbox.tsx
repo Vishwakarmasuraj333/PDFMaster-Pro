@@ -37,6 +37,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
   const [repeatPasswordText, setRepeatPasswordText] = useState('');
   const [showPassword1, setShowPassword1] = useState(false);
   const [showPassword2, setShowPassword2] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [signerName, setSignerName] = useState('Suraj Vishwakarma');
   const [rotateAngle, setRotateAngle] = useState(90);
 
@@ -77,6 +78,13 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
 
   const handleProcess = async () => {
     if (files.length === 0) return;
+
+    const authEmail = typeof window !== 'undefined' ? sessionStorage.getItem('pdfmaster_auth_email') : null;
+    if (!authEmail) {
+      setShowAuthModal(true);
+      return;
+    }
+
     setIsProcessing(true);
     setProgress(15);
     setErrorMessage(null);
@@ -544,6 +552,41 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
             )}
           </div>
 
+      {/* Authentication Required Modal */}
+      {showAuthModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="max-w-md w-full glass-card p-8 rounded-3xl border border-slate-200 dark:border-slate-800 text-center space-y-6 shadow-2xl relative">
+            <div className="w-16 h-16 rounded-3xl bg-purple-100 dark:bg-purple-950/80 text-purple-600 dark:text-purple-400 mx-auto flex items-center justify-center shadow-lg">
+              <Lock className="w-8 h-8" />
+            </div>
+
+            <div className="space-y-2">
+              <span className="text-xs font-black px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800 uppercase tracking-widest">
+                AUTHENTICATION REQUIRED
+              </span>
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white pt-2">
+                Sign In to Execute {toolTitle}
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                All PDF tools in PDFMaster Pro require an active user session. Log in or create a free account to process your files securely.
+              </p>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <Link
+                href={`/auth/login?redirect=/tools/${toolSlug}`}
+                className="inline-flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs shadow-lg shadow-purple-500/25 transition-all"
+              >
+                <LogIn className="w-4 h-4" /> Log In & Execute Tool
+              </Link>
+              <button
+                onClick={() => setShowAuthModal(false)}
+                className="w-full py-2.5 rounded-2xl text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
