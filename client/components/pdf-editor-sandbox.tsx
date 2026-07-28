@@ -538,7 +538,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
               <button
                 onClick={handleProcess}
                 disabled={isProcessing}
-                className="px-8 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600 text-white font-extrabold text-xs shadow-xl shadow-purple-500/25 transition-all flex items-center gap-2"
+                className="px-8 py-3 rounded-2xl bg-amber-400 hover:bg-amber-500 text-slate-900 font-extrabold text-xs shadow-xl shadow-amber-400/20 transition-all flex items-center gap-2"
               >
                 {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 Execute {toolTitle}
@@ -559,12 +559,12 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
       {showAuthModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="max-w-md w-full glass-card p-8 rounded-3xl border border-slate-200 dark:border-slate-800 text-center space-y-6 shadow-2xl relative">
-            <div className="w-16 h-16 rounded-3xl bg-purple-100 dark:bg-purple-950/80 text-purple-600 dark:text-purple-400 mx-auto flex items-center justify-center shadow-lg">
+            <div className="w-16 h-16 rounded-3xl bg-amber-400/20 text-amber-500 mx-auto flex items-center justify-center shadow-lg border border-amber-400/30">
               <Lock className="w-8 h-8" />
             </div>
 
             <div className="space-y-2">
-              <span className="text-xs font-black px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800 uppercase tracking-widest">
+              <span className="text-xs font-black px-3 py-1 rounded-full bg-amber-400/20 text-amber-500 border border-amber-400/30 uppercase tracking-widest">
                 AUTHENTICATION REQUIRED
               </span>
               <h3 className="text-2xl font-black text-slate-900 dark:text-white pt-2">
@@ -578,7 +578,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
             <div className="space-y-3 pt-2">
               <Link
                 href={`/auth/login?redirect=/tools/${toolSlug}`}
-                className="inline-flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs shadow-lg shadow-purple-500/25 transition-all"
+                className="inline-flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl bg-amber-400 hover:bg-amber-500 text-slate-900 font-extrabold text-xs shadow-lg shadow-amber-400/20 transition-all"
               >
                 <LogIn className="w-4 h-4" /> Log In & Execute Tool
               </Link>

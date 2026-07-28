@@ -41,17 +41,17 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="relative pt-12 pb-20 md:pt-20 md:pb-24 overflow-hidden">
         {/* Glowing background mesh */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-gradient-to-r from-purple-600/20 via-purple-400/20 to-indigo-600/20 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-gradient-to-r from-amber-400/20 via-yellow-500/20 to-amber-600/20 blur-[120px] rounded-full pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10 space-y-6">
           
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-100 dark:bg-purple-950/70 border border-purple-200 dark:border-purple-800/80 text-purple-600 dark:text-purple-300 font-extrabold text-xs shadow-sm">
-            <Sparkles className="w-3.5 h-3.5" /> Next Generation PDF & AI Suite
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-400/20 border border-amber-400/40 text-amber-600 dark:text-amber-400 font-extrabold text-xs shadow-sm">
+            <Sparkles className="w-3.5 h-3.5" /> Premium Yellow SaaS PDF & AI Suite
           </div>
 
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-slate-900 dark:text-white leading-[1.1]">
             Every tool you need to work with <br />
-            <span className="bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-500 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 bg-clip-text text-transparent">
               PDFs in one place
             </span>
           </h1>
