@@ -3,7 +3,7 @@
 import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Sparkles, ArrowLeft, Mail, Lock, LogIn, KeyRound, Loader2, CheckCircle2 } from 'lucide-react';
+import { Sparkles, ArrowLeft, Mail, Lock, LogIn, KeyRound, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 function LoginContent() {
   const router = useRouter();
@@ -14,7 +14,6 @@ function LoginContent() {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [loginSuccess, setLoginSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -22,55 +21,83 @@ function LoginContent() {
     setLoading(true);
     setErrorMessage(null);
 
+    if (!email || !password) {
+      setErrorMessage('Please enter both your email address and password.');
+      setLoading(false);
+      return;
+    }
+
+    if (password.length < 6) {
+      setErrorMessage('Invalid password. Password must be at least 6 characters long.');
+      setLoading(false);
+      return;
+    }
+
     try {
-      // Call real backend authentication API endpoint
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/auth/login`, {
+      // Call backend authentication endpoint
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const res = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, rememberMe }),
-      }).catch(() => null);
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
 
-      if (res && !res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || 'Invalid email or password');
+      const data = await res.json().catch(() => ({}));
+
+      // STRICT BACKEND CHECK - Throw error if status is not 200 OK
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Invalid email or password. Access denied.');
       }
 
-      // Save user session details
+      // Save email for OTP verification step
       if (typeof window !== 'undefined') {
-        sessionStorage.setItem('pdfmaster_auth_email', email);
+        sessionStorage.setItem('pdfmaster_auth_email', email.trim());
       }
 
-      setLoginSuccess(true);
-
-      setTimeout(() => {
-        if (redirectTarget) {
-          router.push(redirectTarget);
-        } else {
-          router.push('/tools'); // Direct redirect to PDF tools
-        }
-      }, 500);
+      // Redirect to OTP verification page
+      router.push(`/auth/verify-otp?method=password${redirectTarget ? `&redirect=${encodeURIComponent(redirectTarget)}` : ''}`);
 
     } catch (err: any) {
-      setErrorMessage(err.message || 'Authentication failed. Please check your credentials.');
+      setErrorMessage(err.message || 'Authentication failed. Incorrect email or password.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSocialLogin = (provider: 'Google' | 'GitHub') => {
+  const handleSocialLogin = async (provider: 'Google' | 'GitHub') => {
     setLoading(true);
-    const mockSocialEmail = `${provider.toLowerCase()}user@pdfmasterpro.com`;
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('pdfmaster_auth_email', mockSocialEmail);
-    }
-    setLoginSuccess(true);
-    setTimeout(() => {
+    setErrorMessage(null);
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const endpoint = provider === 'Google' ? '/auth/google' : '/auth/github';
+      const res = await fetch(`${apiUrl}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: `${provider.toLowerCase()}user@pdfmasterpro.com`,
+          name: `${provider} Authenticated User`,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || `${provider} authentication failed.`);
+      }
+
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('pdfmaster_auth_email', data.user.email);
+      }
+
       if (redirectTarget) {
         router.push(redirectTarget);
       } else {
         router.push('/tools');
       }
-    }, 500);
+    } catch (err: any) {
+      setErrorMessage(err.message || `${provider} login failed.`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -96,15 +123,10 @@ function LoginContent() {
             <p className="text-xs text-slate-500">Sign in with Email & Password, Google, or GitHub</p>
           </div>
 
-          {loginSuccess && (
-            <div className="p-3.5 rounded-2xl bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-extrabold flex items-center justify-center gap-2 animate-bounce">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Signed in successfully! Redirecting to tools...
-            </div>
-          )}
-
           {errorMessage && (
-            <div className="p-3.5 rounded-2xl bg-red-100 dark:bg-red-950/80 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 text-xs font-bold text-center">
-              ⚠️ {errorMessage}
+            <div className="p-4 rounded-2xl bg-red-100 dark:bg-red-950/80 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 text-xs font-bold flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+              <span>{errorMessage}</span>
             </div>
           )}
 
@@ -159,11 +181,11 @@ function LoginContent() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 rounded-2xl bg-amber-400 hover:bg-amber-500 text-slate-900 font-extrabold text-xs shadow-lg shadow-amber-400/20 transition-all flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-2xl bg-amber-400 hover:bg-amber-500 disabled:opacity-50 text-slate-900 font-extrabold text-xs shadow-lg shadow-amber-400/20 transition-all flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
-                  <KeyRound className="w-4 h-4 animate-spin" /> Authenticating...
+                  <KeyRound className="w-4 h-4 animate-spin" /> Verifying Password...
                 </>
               ) : (
                 <>

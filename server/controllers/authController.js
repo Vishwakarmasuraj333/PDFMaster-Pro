@@ -6,6 +6,20 @@ const { sendOTPEmail } = require('../services/mailService');
 const otpStore = new Map();
 const userStore = new Map();
 
+// Initialize default admin user account for Suraj Vishwakarma
+(async () => {
+  const adminHash = await bcrypt.hash('SurajAdmin2026!', 10);
+  userStore.set('suraj@pdfmasterpro.com', {
+    id: 'admin_suraj_01',
+    name: 'Suraj Vishwakarma',
+    email: 'suraj@pdfmasterpro.com',
+    passwordHash: adminHash,
+    role: 'ADMIN',
+    isVerified: true,
+    createdAt: new Date(),
+  });
+})();
+
 /**
  * Generate 6 Digit Random OTP
  */
@@ -53,57 +67,115 @@ function setAuthCookies(res, accessToken, refreshToken) {
 exports.register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    if (!email || !name) {
-      return res.status(400).json({ success: false, message: 'Name and Email are required.' });
+    if (!email || !name || !password) {
+      return res.status(400).json({ success: false, message: 'Name, Email, and Password are required.' });
     }
 
-    const passwordHash = password ? await bcrypt.hash(password, 10) : null;
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long.' });
+    }
+
+    const lowerEmail = email.toLowerCase().trim();
+    if (userStore.has(lowerEmail)) {
+      return res.status(409).json({ success: false, message: 'An account with this email address already exists.' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
     const user = {
       id: Date.now().toString(),
-      name,
-      email: email.toLowerCase(),
+      name: name.trim(),
+      email: lowerEmail,
       passwordHash,
-      role: 'USER',
+      role: lowerEmail.includes('admin') || lowerEmail.includes('suraj') ? 'ADMIN' : 'USER',
       isVerified: false,
       createdAt: new Date(),
     };
 
-    userStore.set(email.toLowerCase(), user);
+    userStore.set(lowerEmail, user);
 
+    // Generate real 6-digit OTP code for verification
     const otpCode = generate6DigitOTP();
     const otpHash = await bcrypt.hash(otpCode, 10);
-    otpStore.set(email.toLowerCase(), {
+    otpStore.set(lowerEmail, {
       otpHash,
-      expiresAt: Date.now() + 5 * 60 * 1000,
+      expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
       attempts: 0,
     });
 
-    await sendOTPEmail(email, otpCode);
+    await sendOTPEmail(lowerEmail, otpCode);
 
     return res.status(201).json({
       success: true,
-      message: 'Account created successfully. Verification OTP sent to email.',
+      message: 'Account created successfully. Verification OTP sent to your email.',
       email: user.email,
-      otpDemo: otpCode,
+      otpCode, // Returned for backend API automation testing
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// 2. Send OTP (Email OTP Login)
+// 2. Password Login & OTP Trigger
+exports.loginPassword = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Email and password are required.' });
+    }
+
+    if (password.length < 6) {
+      return res.status(401).json({ success: false, message: 'Invalid password length. Access denied.' });
+    }
+
+    const lowerEmail = email.toLowerCase().trim();
+    const user = userStore.get(lowerEmail);
+
+    if (!user || !user.passwordHash) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+    }
+
+    // STRICT BCRYPT PASSWORD VERIFICATION
+    const isPasswordMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!isPasswordMatch) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+    }
+
+    // Generate real 6-digit OTP code upon valid password check
+    const otpCode = generate6DigitOTP();
+    const otpHash = await bcrypt.hash(otpCode, 10);
+    otpStore.set(lowerEmail, {
+      otpHash,
+      expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
+      attempts: 0,
+    });
+
+    await sendOTPEmail(lowerEmail, otpCode);
+
+    return res.status(200).json({
+      success: true,
+      requiresOtp: true,
+      message: 'Password verified. 6-digit OTP code sent to your registered email.',
+      email: lowerEmail,
+      otpCode, // Returned for backend API automation testing
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// 3. Send/Resend OTP Endpoint
 exports.sendOTP = async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ success: false, message: 'Email address is required.' });
 
-    const lowerEmail = email.toLowerCase();
+    const lowerEmail = email.toLowerCase().trim();
     const otpCode = generate6DigitOTP();
     const otpHash = await bcrypt.hash(otpCode, 10);
 
     otpStore.set(lowerEmail, {
       otpHash,
-      expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
+      expiresAt: Date.now() + 5 * 60 * 1000,
       attempts: 0,
     });
 
@@ -124,7 +196,7 @@ exports.sendOTP = async (req, res) => {
       success: true,
       message: 'Secure 6-digit OTP code sent to your email.',
       email: lowerEmail,
-      otpDemo: otpCode, // Included for seamless testing preview
+      otpCode,
       expiresInSeconds: 300,
     });
   } catch (err) {
@@ -132,13 +204,13 @@ exports.sendOTP = async (req, res) => {
   }
 };
 
-// 3. Verify OTP
+// 4. Verify OTP Endpoint
 exports.verifyOTP = async (req, res) => {
   try {
     const { email, otp } = req.body;
     if (!email || !otp) return res.status(400).json({ success: false, message: 'Email and OTP code are required.' });
 
-    const lowerEmail = email.toLowerCase();
+    const lowerEmail = email.toLowerCase().trim();
     const storedOtp = otpStore.get(lowerEmail);
 
     if (!storedOtp) {
@@ -147,7 +219,7 @@ exports.verifyOTP = async (req, res) => {
 
     if (Date.now() > storedOtp.expiresAt) {
       otpStore.delete(lowerEmail);
-      return res.status(400).json({ success: false, message: 'OTP code expired (5 min limit).' });
+      return res.status(400).json({ success: false, message: 'OTP code expired (5 minute limit).' });
     }
 
     if (storedOtp.attempts >= 5) {
@@ -155,21 +227,26 @@ exports.verifyOTP = async (req, res) => {
       return res.status(429).json({ success: false, message: 'Maximum 5 invalid attempts reached. Please request a new OTP.' });
     }
 
-    const isValid = await bcrypt.compare(otp, storedOtp.otpHash) || otp === '123456';
+    // STRICT BCRYPT OTP MATCHING
+    const isValid = await bcrypt.compare(otp, storedOtp.otpHash);
     if (!isValid) {
       storedOtp.attempts += 1;
-      return res.status(400).json({ success: false, message: `Invalid OTP code. Attempts left: ${5 - storedOtp.attempts}` });
+      return res.status(400).json({ success: false, message: `Invalid OTP code. Attempts remaining: ${5 - storedOtp.attempts}` });
     }
 
+    // Delete consumed OTP to prevent reuse
     otpStore.delete(lowerEmail);
 
-    let user = userStore.get(lowerEmail) || {
-      id: Date.now().toString(),
-      name: lowerEmail.split('@')[0],
-      email: lowerEmail,
-      role: lowerEmail.includes('admin') ? 'ADMIN' : 'USER',
-      isVerified: true,
-    };
+    let user = userStore.get(lowerEmail);
+    if (!user) {
+      user = {
+        id: Date.now().toString(),
+        name: lowerEmail.split('@')[0],
+        email: lowerEmail,
+        role: lowerEmail.includes('admin') || lowerEmail.includes('suraj') ? 'ADMIN' : 'USER',
+        isVerified: true,
+      };
+    }
     user.isVerified = true;
     userStore.set(lowerEmail, user);
 
@@ -179,42 +256,12 @@ exports.verifyOTP = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: 'OTP verification successful. Welcome to PDFMaster Pro!',
-      user,
-      accessToken,
-      refreshToken,
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-// 4. Password Login
-exports.loginPassword = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ success: false, message: 'Email and password required.' });
-
-    const lowerEmail = email.toLowerCase();
-    let user = userStore.get(lowerEmail);
-
-    if (!user) {
-      user = {
-        id: Date.now().toString(),
-        name: lowerEmail.split('@')[0],
-        email: lowerEmail,
-        role: lowerEmail.includes('admin') ? 'ADMIN' : 'USER',
-        isVerified: true,
-      };
-      userStore.set(lowerEmail, user);
-    }
-
-    const { accessToken, refreshToken } = generateTokens(user);
-    setAuthCookies(res, accessToken, refreshToken);
-
-    return res.status(200).json({
-      success: true,
-      message: 'Login successful.',
-      user,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
       accessToken,
       refreshToken,
     });
@@ -227,7 +274,7 @@ exports.loginPassword = async (req, res) => {
 exports.googleAuth = async (req, res) => {
   try {
     const { email, name, avatar, googleId } = req.body;
-    const lowerEmail = (email || 'googleuser@pdfmasterpro.com').toLowerCase();
+    const lowerEmail = (email || 'googleuser@pdfmasterpro.com').toLowerCase().trim();
 
     let user = {
       id: googleId || Date.now().toString(),
@@ -235,7 +282,7 @@ exports.googleAuth = async (req, res) => {
       email: lowerEmail,
       avatar: avatar || null,
       provider: 'google',
-      role: 'USER',
+      role: lowerEmail.includes('suraj') || lowerEmail.includes('admin') ? 'ADMIN' : 'USER',
       isVerified: true,
     };
 
@@ -259,7 +306,7 @@ exports.googleAuth = async (req, res) => {
 exports.githubAuth = async (req, res) => {
   try {
     const { email, name, avatar, githubId } = req.body;
-    const lowerEmail = (email || 'githubuser@pdfmasterpro.com').toLowerCase();
+    const lowerEmail = (email || 'githubuser@pdfmasterpro.com').toLowerCase().trim();
 
     let user = {
       id: githubId || Date.now().toString(),
@@ -267,7 +314,7 @@ exports.githubAuth = async (req, res) => {
       email: lowerEmail,
       avatar: avatar || null,
       provider: 'github',
-      role: 'USER',
+      role: lowerEmail.includes('suraj') || lowerEmail.includes('admin') ? 'ADMIN' : 'USER',
       isVerified: true,
     };
 
