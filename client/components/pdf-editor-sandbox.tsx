@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useRef } from 'react';
+import Link from 'next/link';
 import { 
   Upload, File, CheckCircle2, Download, Trash2, RotateCw, 
   Lock, Sparkles, Loader2, RefreshCw, AlertCircle, FileText, Image as ImageIcon,
-  Eye, EyeOff
+  Eye, EyeOff, LogIn
 } from 'lucide-react';
 import { 
   mergePDFsClient, imageToPDFClient, rotatePDFClient, watermarkPDFClient, 
@@ -551,6 +552,8 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
               </button>
             )}
           </div>
+        </div>
+      )}
 
       {/* Authentication Required Modal */}
       {showAuthModal && (
