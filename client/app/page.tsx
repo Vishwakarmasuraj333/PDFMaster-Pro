@@ -137,49 +137,49 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             
             {/* Work on Web / Desktop Card */}
-            <div className="p-8 rounded-3xl bg-amber-50/50 dark:bg-slate-800/60 border border-amber-200/70 dark:border-slate-700/80 space-y-6 flex flex-col justify-between group hover:shadow-xl transition-all">
+            <div className="p-8 rounded-3xl bg-amber-50/60 dark:bg-[#161B22] border border-amber-200/80 dark:border-slate-800 space-y-6 flex flex-col justify-between group hover:shadow-xl transition-all">
               <div className="space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-400/30">
                   <Monitor className="w-6 h-6" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">PDFMaster Desktop App</h3>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">PDFMaster Desktop App</h3>
                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                   Process heavy PDF files completely offline with maximal speed and confidentiality on Windows & Mac.
                 </p>
               </div>
-              <Link href="/tools" className="inline-flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-amber-400 group-hover:translate-x-1 transition-transform">
+              <Link href="/tools" className="inline-flex items-center gap-2 text-xs font-extrabold text-amber-600 dark:text-amber-400 group-hover:translate-x-1 transition-transform">
                 Download Desktop App <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
 
             {/* Mobile App Card */}
-            <div className="p-8 rounded-3xl bg-purple-50/50 dark:bg-slate-800/60 border border-purple-200/70 dark:border-slate-700/80 space-y-6 flex flex-col justify-between group hover:shadow-xl transition-all">
+            <div className="p-8 rounded-3xl bg-amber-50/60 dark:bg-[#161B22] border border-amber-200/80 dark:border-slate-800 space-y-6 flex flex-col justify-between group hover:shadow-xl transition-all">
               <div className="space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-400/30">
                   <Smartphone className="w-6 h-6" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">PDFMaster Mobile Scanner</h3>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">PDFMaster Mobile Scanner</h3>
                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                   Turn your phone camera into a mobile scanner and sign contracts directly on the go.
                 </p>
               </div>
-              <Link href="/tools/scan-pdf" className="inline-flex items-center gap-2 text-xs font-bold text-purple-600 dark:text-purple-400 group-hover:translate-x-1 transition-transform">
+              <Link href="/tools/scan-pdf" className="inline-flex items-center gap-2 text-xs font-extrabold text-amber-600 dark:text-amber-400 group-hover:translate-x-1 transition-transform">
                 Try Mobile Scan <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
 
             {/* Web & Rest API */}
-            <div className="p-8 rounded-3xl bg-slate-900 dark:bg-slate-800 text-white space-y-6 flex flex-col justify-between group hover:shadow-xl transition-all">
+            <div className="p-8 rounded-3xl bg-amber-400/10 dark:bg-[#161B22] border-2 border-amber-400/60 dark:border-amber-400/40 space-y-6 flex flex-col justify-between group hover:shadow-xl transition-all shadow-amber-400/10">
               <div className="space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-white/10 text-purple-400 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-2xl bg-amber-400 text-slate-900 flex items-center justify-center shadow-md shadow-amber-400/20">
                   <Globe className="w-6 h-6" />
                 </div>
-                <h3 className="text-lg font-bold text-white">Developer REST API</h3>
-                <p className="text-xs text-slate-300 leading-relaxed">
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">Developer REST API</h3>
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                   Integrate automated PDF conversion microservices into your app via API keys generated in your dashboard.
                 </p>
               </div>
-              <Link href="/dashboard/api-keys" className="inline-flex items-center gap-2 text-xs font-bold text-purple-300 group-hover:translate-x-1 transition-transform">
+              <Link href="/dashboard/api-keys" className="inline-flex items-center gap-2 text-xs font-black text-amber-600 dark:text-amber-400 group-hover:translate-x-1 transition-transform">
                 Get API Keys <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
@@ -234,23 +234,23 @@ export default function LandingPage() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-4">
-            <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-              <span className="text-3xl font-black text-purple-600 dark:text-purple-400">10M+</span>
+            <div className="p-6 rounded-2xl bg-white dark:bg-[#161B22] border border-slate-200 dark:border-slate-800 shadow-sm">
+              <span className="text-3xl font-black text-amber-500">10M+</span>
               <p className="text-xs font-semibold text-slate-500 mt-1">Files Processed</p>
             </div>
 
-            <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-              <span className="text-3xl font-black text-purple-600 dark:text-purple-400">99.9%</span>
+            <div className="p-6 rounded-2xl bg-white dark:bg-[#161B22] border border-slate-200 dark:border-slate-800 shadow-sm">
+              <span className="text-3xl font-black text-amber-500">99.9%</span>
               <p className="text-xs font-semibold text-slate-500 mt-1">Uptime SLA</p>
             </div>
 
-            <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-              <span className="text-3xl font-black text-purple-600 dark:text-purple-400">256-Bit</span>
+            <div className="p-6 rounded-2xl bg-white dark:bg-[#161B22] border border-slate-200 dark:border-slate-800 shadow-sm">
+              <span className="text-3xl font-black text-amber-500">256-Bit</span>
               <p className="text-xs font-semibold text-slate-500 mt-1">AES Security</p>
             </div>
 
-            <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-              <span className="text-3xl font-black text-purple-600 dark:text-purple-400">4.9/5</span>
+            <div className="p-6 rounded-2xl bg-white dark:bg-[#161B22] border border-slate-200 dark:border-slate-800 shadow-sm">
+              <span className="text-3xl font-black text-amber-500">4.9/5</span>
               <p className="text-xs font-semibold text-slate-500 mt-1">User Rating</p>
             </div>
           </div>
@@ -258,10 +258,10 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing Section */}
-      <section className="py-20 bg-slate-900 text-white">
+      <section className="py-20 bg-[#12161A] text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
           <div className="text-center max-w-2xl mx-auto space-y-4">
-            <span className="text-xs font-bold px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+            <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-400/20 text-amber-400 border border-amber-400/30 uppercase tracking-widest">
               PRICING PLANS
             </span>
             <h2 className="text-3xl sm:text-5xl font-black">Simple, Transparent Pricing</h2>
@@ -271,33 +271,33 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             
             {/* Free */}
-            <div className="p-8 rounded-3xl bg-slate-800/80 border border-slate-700 space-y-6">
+            <div className="p-8 rounded-3xl bg-slate-900 border border-slate-800 space-y-6">
               <h3 className="text-xl font-bold text-white">Free Explorer</h3>
               <div className="flex items-baseline gap-1">
                 <span className="text-4xl font-black">$0</span>
                 <span className="text-xs text-slate-400">/ forever</span>
               </div>
               <ul className="space-y-3 text-xs text-slate-300">
-                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-400" /> Access to 30+ PDF tools</li>
-                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-400" /> 10 daily tasks</li>
-                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-400" /> 500 MB cloud storage</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-amber-400" /> Access to 30+ PDF tools</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-amber-400" /> 10 daily tasks</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-amber-400" /> 500 MB cloud storage</li>
               </ul>
-              <Link href="/auth/signup" className="block text-center w-full py-3 rounded-2xl bg-slate-700 hover:bg-slate-600 font-bold text-xs">
+              <Link href="/auth/signup" className="block text-center w-full py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 font-bold text-xs">
                 Get Started Free
               </Link>
             </div>
 
             {/* Pro */}
-            <div className="p-8 rounded-3xl bg-gradient-to-b from-purple-900/90 to-slate-900 border-2 border-purple-500 space-y-6 relative shadow-2xl shadow-purple-500/20">
-              <span className="absolute -top-3 right-6 text-[10px] font-extrabold px-3 py-1 rounded-full bg-purple-500 text-white">MOST POPULAR</span>
+            <div className="p-8 rounded-3xl bg-gradient-to-b from-amber-400/20 to-slate-900 border-2 border-amber-400 space-y-6 relative shadow-2xl shadow-amber-400/10">
+              <span className="absolute -top-3 right-6 text-[10px] font-black px-3 py-1 rounded-full bg-amber-400 text-slate-900 uppercase">MOST POPULAR</span>
               <h3 className="text-xl font-bold text-white">Pro Professional</h3>
               <div className="flex items-baseline gap-1">
                 <span className="text-4xl font-black">$9.99</span>
-                <span className="text-xs text-purple-300">/ month</span>
+                <span className="text-xs text-amber-400">/ month</span>
               </div>
-              <ul className="space-y-3 text-xs text-purple-100">
-                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-400" /> Unlimited task execution</li>
-                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-400" /> 10 GB cloud storage</li>
+              <ul className="space-y-3 text-xs text-slate-200 font-semibold">
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-amber-400" /> Unlimited task execution</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-amber-400" /> 10 GB cloud storage</li>
                 <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-400" /> Neural AI PDF Summary & Chat</li>
                 <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-400" /> Priority Processing Queue</li>
               </ul>
