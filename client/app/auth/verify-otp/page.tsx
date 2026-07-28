@@ -10,7 +10,7 @@ export default function VerifyOtpPage() {
   const searchParams = useSearchParams();
   const method = searchParams.get('method') || 'Authentication';
 
-  const [otp, setOtp] = useState(['1', '2', '3', '4', '5', '6']);
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('itxsurajofficial@gmail.com');
   const [countdown, setCountdown] = useState(60);
@@ -109,9 +109,13 @@ export default function VerifyOtpPage() {
           )}
 
           {/* OTP Code Display Banner */}
-          <div className="p-3.5 rounded-2xl bg-purple-100 dark:bg-purple-950/80 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 text-xs font-extrabold flex items-center justify-between">
+          <div 
+            onClick={() => setOtp(['1', '2', '3', '4', '5', '6'])}
+            className="p-3.5 rounded-2xl bg-purple-100 dark:bg-purple-950/80 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 text-xs font-extrabold flex items-center justify-between cursor-pointer hover:bg-purple-200 dark:hover:bg-purple-900 transition-colors"
+            title="Click to auto-fill code"
+          >
             <span className="flex items-center gap-1.5"><Sparkles className="w-4 h-4 text-purple-600" /> Verification Code:</span>
-            <span className="font-mono text-base tracking-widest text-purple-600 dark:text-purple-400">123456</span>
+            <span className="font-mono text-base tracking-widest text-purple-600 dark:text-purple-400 font-black underline">123456</span>
           </div>
 
           <form onSubmit={handleVerify} className="space-y-6">
