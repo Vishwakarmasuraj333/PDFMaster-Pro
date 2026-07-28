@@ -34,17 +34,32 @@ function LoginContent() {
     }
 
     try {
-      // Call backend authentication endpoint
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-      const res = await fetch(`${apiUrl}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), password }),
-      });
+      // Call native serverless or custom backend endpoint
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
+      let res: Response | null = null;
+      
+      try {
+        res = await fetch(`${apiUrl}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim(), password }),
+        });
+      } catch (networkErr) {
+        // Fallback to relative /api Route Handler if absolute endpoint fails
+        res = await fetch(`/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim(), password }),
+        }).catch(() => null);
+      }
+
+      if (!res) {
+        throw new Error('Server connection error. Please try again.');
+      }
 
       const data = await res.json().catch(() => ({}));
 
-      // STRICT BACKEND CHECK - Throw error if status is not 200 OK
+      // STRICT CHECK - Throw error if status is not 200 OK
       if (!res.ok || !data.success) {
         throw new Error(data.message || 'Invalid email or password. Access denied.');
       }
