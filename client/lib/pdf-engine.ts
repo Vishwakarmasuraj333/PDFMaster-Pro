@@ -123,8 +123,13 @@ export async function watermarkPDFClient(
     const bytes = await imageToPDFClient([file]);
     pdfDoc = await PDFDocument.load(bytes);
   } else {
-    const arrayBuffer = await file.arrayBuffer();
-    pdfDoc = await PDFDocument.load(arrayBuffer);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      pdfDoc = await PDFDocument.load(arrayBuffer);
+    } catch (e) {
+      const bytes = await imageToPDFClient([file]);
+      pdfDoc = await PDFDocument.load(bytes);
+    }
   }
 
   const pages = pdfDoc.getPages();
