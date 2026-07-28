@@ -13,10 +13,14 @@ export default function DashboardOverviewPage() {
   const [files, setFiles] = useState<StoredFile[]>([]);
   const [storageUsedGB, setStorageUsedGB] = useState('1.25');
 
+  const [userEmail, setUserEmail] = useState('itxsurajofficial@gmail.com');
+
   useEffect(() => {
     const list = getSavedFiles();
     setFiles(list.filter(f => !f.isTrash));
     setStorageUsedGB(calculateStorageUsedGB(list));
+    const saved = sessionStorage.getItem('pdfmaster_auth_email');
+    if (saved) setUserEmail(saved);
   }, []);
 
   const stats = [
