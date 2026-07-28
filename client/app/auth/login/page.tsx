@@ -34,46 +34,30 @@ function LoginContent() {
     }
 
     try {
-      // Call native serverless or custom backend endpoint
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
-      let res: Response | null = null;
-      
-      try {
-        res = await fetch(`${apiUrl}/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email.trim(), password }),
-        });
-      } catch (networkErr) {
-        // Fallback to relative /api Route Handler if absolute endpoint fails
-        res = await fetch(`/api/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email.trim(), password }),
-        }).catch(() => null);
-      }
-
-      if (!res) {
-        throw new Error('Server connection error. Please try again.');
-      }
+      // Call native Vercel serverless Route Handler directly
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
 
       const data = await res.json().catch(() => ({}));
 
-      // STRICT CHECK - Throw error if status is not 200 OK
+      // STRICT BACKEND VERIFICATION - If credentials are bad, throw error and STOP
       if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Invalid email or password. Access denied.');
+        throw new Error(data.message || 'Invalid email or password.');
       }
 
-      // Save email for OTP verification step
+      // Save email for OTP verification step ONLY AFTER SUCCESSFUL PASSWORD VERIFICATION
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('pdfmaster_auth_email', email.trim());
       }
 
-      // Redirect to OTP verification page
+      // Redirect to OTP verification page ONLY AFTER VALID PASSWORD
       router.push(`/auth/verify-otp?method=password${redirectTarget ? `&redirect=${encodeURIComponent(redirectTarget)}` : ''}`);
 
     } catch (err: any) {
-      setErrorMessage(err.message || 'Authentication failed. Incorrect email or password.');
+      setErrorMessage(err.message || 'Invalid email or password.');
     } finally {
       setLoading(false);
     }

@@ -69,16 +69,17 @@ function VerifyOtpContent() {
     }
 
     try {
-      // API call to backend OTP verification
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/auth/verify-otp`, {
+      // Call native Vercel serverless Route Handler
+      const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otp: enteredOtp }),
-      }).catch(() => null);
+      });
 
-      if (res && !res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || 'Invalid or expired OTP code');
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Invalid or expired OTP code.');
       }
 
       // Successful verification
