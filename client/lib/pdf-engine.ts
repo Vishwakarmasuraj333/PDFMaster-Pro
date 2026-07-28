@@ -283,7 +283,7 @@ export async function protectPDFClient(file: File, userPassword: string = 'Passw
 
   const pwd = userPassword.trim() || 'PDFMaster2026!';
   try {
-    pdfDoc.encrypt({
+    (pdfDoc as any).encrypt({
       userPassword: pwd,
       ownerPassword: pwd,
       permissions: {
