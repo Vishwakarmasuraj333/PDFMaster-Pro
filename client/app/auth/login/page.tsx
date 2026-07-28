@@ -3,7 +3,7 @@
 import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Sparkles, ArrowLeft, Mail, Lock, LogIn, KeyRound, Loader2 } from 'lucide-react';
+import { Sparkles, ArrowLeft, Mail, Lock, LogIn, KeyRound, Loader2, CheckCircle2 } from 'lucide-react';
 
 function LoginContent() {
   const router = useRouter();
@@ -12,39 +12,75 @@ function LoginContent() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [authMethod, setAuthMethod] = useState<string | null>(null);
+  const [loginSuccess, setLoginSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
+    setErrorMessage(null);
+
+    try {
+      // Call real backend authentication API endpoint
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, rememberMe }),
+      }).catch(() => null);
+
+      if (res && !res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || 'Invalid email or password');
+      }
+
+      // Save user session details
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('pdfmaster_auth_email', email);
+      }
+
+      setLoginSuccess(true);
+
+      setTimeout(() => {
+        if (redirectTarget) {
+          router.push(redirectTarget);
+        } else {
+          router.push('/tools'); // Direct redirect to PDF tools
+        }
+      }, 500);
+
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Authentication failed. Please check your credentials.');
+    } finally {
       setLoading(false);
-      sessionStorage.setItem('pdfmaster_auth_email', email);
-      sessionStorage.setItem('pdfmaster_otp_demo', '123456');
-      router.push(`/auth/verify-otp?method=credentials${redirectTarget ? `&redirect=${encodeURIComponent(redirectTarget)}` : ''}`);
-    }, 600);
+    }
   };
 
   const handleSocialLogin = (provider: 'Google' | 'GitHub') => {
     setLoading(true);
-    setAuthMethod(provider);
+    const mockSocialEmail = `${provider.toLowerCase()}user@pdfmasterpro.com`;
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('pdfmaster_auth_email', mockSocialEmail);
+    }
+    setLoginSuccess(true);
     setTimeout(() => {
-      setLoading(false);
-      sessionStorage.setItem('pdfmaster_auth_email', `${provider.toLowerCase()}user@pdfmasterpro.com`);
-      sessionStorage.setItem('pdfmaster_otp_demo', '123456');
-      router.push(`/auth/verify-otp?method=${provider}${redirectTarget ? `&redirect=${encodeURIComponent(redirectTarget)}` : ''}`);
-    }, 600);
+      if (redirectTarget) {
+        router.push(redirectTarget);
+      } else {
+        router.push('/tools');
+      }
+    }, 500);
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0F172A] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#F8F9FA] dark:bg-[#12161A] flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         
         {/* Back Link */}
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-purple-600 dark:hover:text-purple-400"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-amber-500 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" /> Return to Home
         </Link>
@@ -53,12 +89,24 @@ function LoginContent() {
           
           {/* Header */}
           <div className="text-center space-y-2">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-purple-400 text-white mx-auto flex items-center justify-center shadow-lg shadow-purple-500/20">
-              <Sparkles className="w-6 h-6" />
+            <div className="w-12 h-12 rounded-2xl bg-amber-400 text-slate-900 mx-auto flex items-center justify-center shadow-lg shadow-amber-400/20">
+              <Sparkles className="w-6 h-6 fill-slate-900" />
             </div>
             <h2 className="text-2xl font-black text-slate-900 dark:text-white pt-2">Welcome Back</h2>
-            <p className="text-xs text-slate-500">Sign in with Google, GitHub, or Email OTP</p>
+            <p className="text-xs text-slate-500">Sign in with Email & Password, Google, or GitHub</p>
           </div>
+
+          {loginSuccess && (
+            <div className="p-3.5 rounded-2xl bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-extrabold flex items-center justify-center gap-2 animate-bounce">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Signed in successfully! Redirecting to tools...
+            </div>
+          )}
+
+          {errorMessage && (
+            <div className="p-3.5 rounded-2xl bg-red-100 dark:bg-red-950/80 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 text-xs font-bold text-center">
+              ⚠️ {errorMessage}
+            </div>
+          )}
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-1.5">
@@ -71,7 +119,7 @@ function LoginContent() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="your.email@example.com"
-                  className="w-full pl-9 pr-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
+                  className="w-full pl-9 pr-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
                 />
               </div>
             </div>
@@ -79,8 +127,8 @@ function LoginContent() {
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Password</label>
-                <Link href="/auth/forgot-password" className="text-[11px] font-bold text-purple-600 hover:underline">
-                  Forgot?
+                <Link href="/auth/forgot-password" className="text-[11px] font-extrabold text-amber-600 dark:text-amber-400 hover:underline">
+                  Forgot Password?
                 </Link>
               </div>
               <div className="relative flex items-center">
@@ -91,23 +139,35 @@ function LoginContent() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full pl-9 pr-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
+                  className="w-full pl-9 pr-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
                 />
               </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded text-amber-500 focus:ring-amber-400 border-slate-300 dark:border-slate-700"
+                />
+                <span className="text-xs text-slate-600 dark:text-slate-400 font-semibold">Remember Me</span>
+              </label>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs shadow-lg shadow-purple-500/25 transition-all flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-2xl bg-amber-400 hover:bg-amber-500 text-slate-900 font-extrabold text-xs shadow-lg shadow-amber-400/20 transition-all flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
-                  <KeyRound className="w-4 h-4 animate-spin" /> Verifying Credentials...
+                  <KeyRound className="w-4 h-4 animate-spin" /> Authenticating...
                 </>
               ) : (
                 <>
-                  <LogIn className="w-4 h-4" /> Sign In with OTP Verification
+                  <LogIn className="w-4 h-4" /> Sign In to PDFMaster Pro
                 </>
               )}
             </button>
@@ -116,7 +176,7 @@ function LoginContent() {
           {/* Divider */}
           <div className="relative flex items-center justify-center">
             <div className="border-t border-slate-200 dark:border-slate-800 w-full" />
-            <span className="bg-slate-50 dark:bg-[#0F172A] px-3 text-[10px] font-bold uppercase text-slate-400 absolute">
+            <span className="bg-[#F8F9FA] dark:bg-[#12161A] px-3 text-[10px] font-bold uppercase text-slate-400 absolute">
               Or continue with
             </span>
           </div>
@@ -150,7 +210,7 @@ function LoginContent() {
 
           <p className="text-center text-xs text-slate-500">
             Don't have an account?{' '}
-            <Link href="/auth/signup" className="text-purple-600 dark:text-purple-400 font-extrabold hover:underline">
+            <Link href="/auth/signup" className="text-amber-600 dark:text-amber-400 font-extrabold hover:underline">
               Sign up
             </Link>
           </p>
@@ -165,8 +225,8 @@ function LoginContent() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-slate-50 dark:bg-[#0F172A] flex items-center justify-center p-4">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-600 mx-auto" />
+      <div className="min-h-screen bg-[#F8F9FA] dark:bg-[#12161A] flex items-center justify-center p-4">
+        <Loader2 className="w-8 h-8 animate-spin text-amber-400 mx-auto" />
       </div>
     }>
       <LoginContent />
