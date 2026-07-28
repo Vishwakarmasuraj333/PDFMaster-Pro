@@ -68,10 +68,11 @@ export default function VerifyOtpPage() {
       setLoading(false);
       setVerifiedSuccess(true);
       setTimeout(() => {
-        if (email.includes('admin')) {
-          router.push('/admin');
-        } else {
+        const isOwner = email.includes('suraj') || email.includes('itxsuraj') || email.includes('admin');
+        if (isOwner) {
           router.push('/dashboard');
+        } else {
+          router.push('/tools');
         }
       }, 800);
     }, 600);

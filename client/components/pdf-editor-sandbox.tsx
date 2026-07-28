@@ -96,7 +96,13 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
       } else if (toolSlug === 'rotate-pdf') {
         resultBytes = await rotatePDFClient(firstFile, rotateAngle);
       } else if (toolSlug === 'add-watermark') {
-        resultBytes = await watermarkPDFClient(firstFile, watermarkText);
+        resultBytes = await watermarkPDFClient(firstFile, watermarkText, {
+          fontSize: watermarkSize,
+          opacity: watermarkOpacity,
+          rotationDegrees: watermarkRotation,
+          colorHex: watermarkColor,
+          position: watermarkPosition,
+        });
       } else if (toolSlug === 'add-page-numbers') {
         resultBytes = await pageNumbersPDFClient(firstFile);
       } else if (toolSlug === 'sign-pdf') {
