@@ -3,7 +3,8 @@
 import React, { useState, useRef } from 'react';
 import { 
   Upload, File, CheckCircle2, Download, Trash2, RotateCw, 
-  Lock, Sparkles, Loader2, RefreshCw, AlertCircle, FileText, Image as ImageIcon
+  Lock, Sparkles, Loader2, RefreshCw, AlertCircle, FileText, Image as ImageIcon,
+  Eye, EyeOff
 } from 'lucide-react';
 import { 
   mergePDFsClient, imageToPDFClient, rotatePDFClient, watermarkPDFClient, 
@@ -27,7 +28,10 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
 
   // Custom inputs
   const [watermarkText, setWatermarkText] = useState('PDFMaster Pro Confidential');
-  const [passwordText, setPasswordText] = useState('Password123');
+  const [passwordText, setPasswordText] = useState('');
+  const [repeatPasswordText, setRepeatPasswordText] = useState('');
+  const [showPassword1, setShowPassword1] = useState(false);
+  const [showPassword2, setShowPassword2] = useState(false);
   const [signerName, setSignerName] = useState('Suraj Vishwakarma');
   const [rotateAngle, setRotateAngle] = useState(90);
 
@@ -282,14 +286,68 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
           )}
 
           {toolSlug === 'protect-pdf' && (
-            <div className="p-4 rounded-2xl bg-purple-50/50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/50 space-y-2">
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Set Security Password</label>
-              <input
-                type="password"
-                value={passwordText}
-                onChange={(e) => setPasswordText(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-semibold"
-              />
+            <div className="p-6 rounded-3xl bg-purple-50/60 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 space-y-4">
+              <div>
+                <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                  <Lock className="w-5 h-5 text-purple-600" /> Protect PDF
+                </h3>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">Set a password to protect your PDF file</p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Type password</label>
+                  <div className="relative flex items-center">
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3" />
+                    <input
+                      type={showPassword1 ? "text" : "password"}
+                      placeholder="Type password"
+                      value={passwordText}
+                      onChange={(e) => setPasswordText(e.target.value)}
+                      className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword1(!showPassword1)}
+                      className="p-1.5 text-slate-400 hover:text-purple-600 absolute right-2.5"
+                    >
+                      {showPassword1 ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Repeat password</label>
+                  <div className="relative flex items-center">
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3" />
+                    <input
+                      type={showPassword2 ? "text" : "password"}
+                      placeholder="Repeat password"
+                      value={repeatPasswordText}
+                      onChange={(e) => setRepeatPasswordText(e.target.value)}
+                      className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword2(!showPassword2)}
+                      className="p-1.5 text-slate-400 hover:text-purple-600 absolute right-2.5"
+                    >
+                      {showPassword2 ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {repeatPasswordText && passwordText !== repeatPasswordText && (
+                  <p className="text-[11px] font-bold text-red-500 flex items-center gap-1">
+                    ⚠️ Passwords do not match
+                  </p>
+                )}
+                {repeatPasswordText && passwordText === repeatPasswordText && (
+                  <p className="text-[11px] font-bold text-emerald-500 flex items-center gap-1">
+                    ✓ Passwords match successfully
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
