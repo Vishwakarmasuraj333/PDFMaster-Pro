@@ -4,15 +4,34 @@ This guide provides step-by-step instructions to deploy **PDFMaster Pro** to pro
 
 ---
 
-## 1. Vercel Deployment (Frontend `client/`)
+## 1. Vercel Deployment (Frontend & Serverless API)
 
-1. Push your code to GitHub / GitLab.
+1. Push your code to GitHub: `git push -u origin main`
 2. Log into [Vercel](https://vercel.com) and click **Add New Project**.
-3. Select the `client` directory as the Root Directory.
+3. Import repository `Vishwakarmasuraj333/PDFMaster-Pro`.
 4. Set Framework Preset to **Next.js**.
-5. Environment Variables:
-   - `NEXT_PUBLIC_API_URL`: `https://your-backend-api.onrender.com/api`
-   - `NEXT_PUBLIC_APP_NAME`: `PDFMaster Pro`
+5. Go to **Environment Variables** → Click **"Paste Environment Variables"** and paste:
+
+```env
+NEXT_PUBLIC_APP_URL=https://pdfmasterpro.com
+NEXT_PUBLIC_API_URL=https://pdfmasterpro.com/api
+NODE_ENV=production
+DATABASE_URL=mysql://avnadmin:YOUR_AIVEN_PASSWORD@mysql-37ec536c-itxsurajofficial-3639.i.aivencloud.com:20680/pdfmaster_pro?ssl-mode=REQUIRED
+JWT_SECRET=super_secret_jwt_key_pdfmaster_2026
+JWT_REFRESH_SECRET=super_secret_refresh_key_pdfmaster_2026
+NEXTAUTH_SECRET=super_secret_nextauth_key_pdfmaster_2026
+NEXTAUTH_URL=https://pdfmasterpro.com
+GMAIL_USER=suraj@pdfmasterpro.com
+GMAIL_APP_PASSWORD=your_gmail_16_digit_app_password
+GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
+STRIPE_SECRET_KEY=sk_live_your_stripe_secret_key
+STRIPE_WEBHOOK_SECRET=whsec_your_stripe_webhook_secret
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_your_stripe_publishable_key
+```
+
 6. Click **Deploy**.
 
 ---
