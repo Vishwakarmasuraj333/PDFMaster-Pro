@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ShieldCheck, ArrowLeft, CheckCircle2, RotateCw, Sparkles } from 'lucide-react';
+import { ShieldCheck, ArrowLeft, CheckCircle2, RotateCw, Sparkles, Loader2 } from 'lucide-react';
 
-export default function VerifyOtpPage() {
+function VerifyOtpContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const method = searchParams.get('method') || 'Authentication';
@@ -47,18 +47,10 @@ export default function VerifyOtpPage() {
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    if (pasted) {
-      const newOtp = pasted.split('');
-      while (newOtp.length < 6) newOtp.push('');
-      setOtp(newOtp);
-      inputRefs.current[Math.min(pasted.length, 5)]?.focus();
+    if (pasted.length === 6) {
+      setOtp(pasted.split(''));
+      inputRefs.current[5]?.focus();
     }
-  };
-
-  const handleResend = () => {
-    if (countdown > 0) return;
-    setCountdown(60);
-    sessionStorage.setItem('pdfmaster_otp_demo', '123456');
   };
 
   const handleVerify = (e: React.FormEvent) => {
@@ -84,22 +76,21 @@ export default function VerifyOtpPage() {
         
         <Link
           href="/auth/login"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-purple-600 dark:hover:text-purple-400"
+          className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-purple-600 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Login
         </Link>
 
-        <div className="glass-card rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-6 text-center">
-          
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-purple-400 text-white mx-auto flex items-center justify-center shadow-lg shadow-purple-500/20">
-            <ShieldCheck className="w-6 h-6" />
-          </div>
-
-          <div className="space-y-1">
+        <div className="glass-card rounded-3xl p-8 border border-slate-200 dark:border-slate-800 space-y-6 shadow-2xl">
+          <div className="text-center space-y-2">
+            <div className="w-14 h-14 rounded-2xl bg-purple-100 dark:bg-purple-950/80 text-purple-600 dark:text-purple-400 mx-auto flex items-center justify-center shadow-lg">
+              <ShieldCheck className="w-7 h-7" />
+            </div>
             <h2 className="text-2xl font-black text-slate-900 dark:text-white">Email OTP Verification</h2>
             <p className="text-xs text-slate-500">
-              {method} Security Verification code sent to <br />
-              <span className="font-extrabold text-purple-600 dark:text-purple-400">{email}</span>
+              {method} Security Verification code sent to
+              <br />
+              <strong className="text-purple-600 dark:text-purple-400">{email}</strong>
             </p>
           </div>
 
@@ -140,28 +131,50 @@ export default function VerifyOtpPage() {
 
             <button
               type="submit"
-              disabled={loading || verifiedSuccess}
-              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600 text-white font-extrabold text-xs shadow-xl shadow-purple-500/25 transition-all flex items-center justify-center gap-2"
+              disabled={loading || otp.join('').length < 6}
+              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600 disabled:opacity-50 text-white font-extrabold text-xs shadow-xl shadow-purple-500/25 transition-all flex items-center justify-center gap-2"
             >
-              <CheckCircle2 className="w-4 h-4" /> {loading ? 'Authenticating Credentials...' : 'Verify OTP & Log In'}
+              {loading ? (
+                <>
+                  <RotateCw className="w-4 h-4 animate-spin" /> Verifying Code...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4" /> Verify OTP & Log In
+                </>
+              )}
             </button>
           </form>
 
-          <div className="pt-2 border-t border-slate-200 dark:border-slate-800 text-xs">
+          <div className="text-center pt-2">
             {countdown > 0 ? (
-              <span className="text-slate-400 font-medium">Resend OTP Code in <strong className="text-purple-600">{countdown}s</strong></span>
+              <p className="text-xs text-slate-400 font-medium">
+                Resend OTP Code In <span className="text-purple-600 dark:text-purple-400 font-bold">{countdown}s</span>
+              </p>
             ) : (
               <button
-                onClick={handleResend}
-                className="font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center justify-center gap-1.5 mx-auto"
+                onClick={() => setCountdown(60)}
+                className="text-xs font-extrabold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 mx-auto"
               >
-                <RotateCw className="w-3.5 h-3.5" /> Resend OTP Code
+                <RotateCw className="w-3.5 h-3.5" /> Resend New OTP
               </button>
             )}
           </div>
-
         </div>
+
       </div>
     </div>
+  );
+}
+
+export default function VerifyOtpPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-50 dark:bg-[#0F172A] flex items-center justify-center p-4">
+        <Loader2 className="w-8 h-8 animate-spin text-purple-600 mx-auto" />
+      </div>
+    }>
+      <VerifyOtpContent />
+    </Suspense>
   );
 }
