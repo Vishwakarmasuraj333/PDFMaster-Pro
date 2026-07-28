@@ -1,27 +1,62 @@
 import { NextResponse } from 'next/server';
+import { userStore } from '@/lib/auth-store';
 
 export async function POST(request: Request) {
   try {
-    const { email, name } = await request.json();
+    const { email, name, googleId } = await request.json();
     const lowerEmail = (email || 'googleuser@pdfmasterpro.com').toLowerCase().trim();
     const isOwner = lowerEmail.includes('suraj') || lowerEmail.includes('admin');
+    const role = isOwner ? 'ADMIN' : 'USER';
+
+    let user = userStore.get(lowerEmail);
+    if (!user) {
+      user = {
+        id: googleId || Date.now().toString(),
+        name: name || 'Google User',
+        email: lowerEmail,
+        passwordHash: '',
+        role: role as 'ADMIN' | 'USER',
+        isVerified: true,
+        createdAt: new Date(),
+      };
+      userStore.set(lowerEmail, user);
+    }
 
     const response = NextResponse.json({
       success: true,
-      message: 'Google OAuth authentication successful.',
+      message: 'Google OAuth 2.0 authentication successful.',
       user: {
-        id: Date.now().toString(),
-        name: name || 'Google User',
-        email: lowerEmail,
-        role: isOwner ? 'ADMIN' : 'USER',
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
       },
     });
 
+    const isProd = process.env.NODE_ENV === 'production';
+
+    // Issue all 3 HttpOnly secure cookies (pdfmaster_session, accessToken, refreshToken)
     response.cookies.set('pdfmaster_session', lowerEmail, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProd,
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60,
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+      path: '/',
+    });
+
+    response.cookies.set('accessToken', `google_access_${Date.now()}`, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: 'strict',
+      maxAge: 15 * 60, // 15 mins
+      path: '/',
+    });
+
+    response.cookies.set('refreshToken', `google_refresh_${Date.now()}`, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60, // 7 days
       path: '/',
     });
 

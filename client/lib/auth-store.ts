@@ -61,6 +61,19 @@ export const otpStore = globalAuthStore.pdfmasterOtpStore;
       createdAt: new Date(),
     });
   }
+
+  if (!userStore.has('itsurya9930@gmail.com')) {
+    const userHash = await bcrypt.hash('bittu8097944', 10);
+    userStore.set('itsurya9930@gmail.com', {
+      id: 'user_surya_03',
+      name: 'Surya Vishwakarma',
+      email: 'itsurya9930@gmail.com',
+      passwordHash: userHash,
+      role: 'ADMIN',
+      isVerified: true,
+      createdAt: new Date(),
+    });
+  }
 })();
 
 /**
