@@ -27,7 +27,12 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Custom inputs
-  const [watermarkText, setWatermarkText] = useState('PDFMaster Pro Confidential');
+  const [watermarkText, setWatermarkText] = useState('Suraj Vishwakarma');
+  const [watermarkSize, setWatermarkSize] = useState(36);
+  const [watermarkOpacity, setWatermarkOpacity] = useState(0.35);
+  const [watermarkRotation, setWatermarkRotation] = useState(45);
+  const [watermarkColor, setWatermarkColor] = useState('#7C3AED');
+  const [watermarkPosition, setWatermarkPosition] = useState<'diagonal' | 'center' | 'top-left' | 'bottom-right'>('diagonal');
   const [passwordText, setPasswordText] = useState('');
   const [repeatPasswordText, setRepeatPasswordText] = useState('');
   const [showPassword1, setShowPassword1] = useState(false);
@@ -273,14 +278,118 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
 
           {/* Custom Settings Controls per Tool */}
           {toolSlug === 'add-watermark' && (
-            <div className="p-4 rounded-2xl bg-purple-50/50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/50 space-y-2">
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Watermark Stamp Text</label>
-              <input
-                type="text"
-                value={watermarkText}
-                onChange={(e) => setWatermarkText(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-semibold"
-              />
+            <div className="p-6 rounded-3xl bg-purple-50/60 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 space-y-5">
+              <div>
+                <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-purple-600" /> Watermark Stamp Options
+                </h3>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  Stamp custom text or name over all PDF pages with font size, opacity, rotation, and color controls.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {/* Stamp Text Input */}
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Watermark Stamp Text / Name</label>
+                  <input
+                    type="text"
+                    value={watermarkText}
+                    onChange={(e) => setWatermarkText(e.target.value)}
+                    placeholder="Enter watermark text or name..."
+                    className="w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-purple-500 shadow-sm"
+                  />
+                </div>
+
+                {/* Font Size & Opacity Controls */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400">Font Size</label>
+                    <div className="flex gap-1.5">
+                      {[
+                        { label: '24px', val: 24 },
+                        { label: '36px', val: 36 },
+                        { label: '48px', val: 48 },
+                        { label: '64px', val: 64 },
+                      ].map((s) => (
+                        <button
+                          key={s.val}
+                          type="button"
+                          onClick={() => setWatermarkSize(s.val)}
+                          className={`flex-1 py-1.5 rounded-xl text-[11px] font-extrabold border transition-all ${watermarkSize === s.val ? 'bg-purple-600 text-white border-purple-600 shadow-sm' : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}
+                        >
+                          {s.val}px
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400">Opacity / Transparency</label>
+                    <div className="flex gap-1.5">
+                      {[
+                        { label: '20%', val: 0.20 },
+                        { label: '35%', val: 0.35 },
+                        { label: '60%', val: 0.60 },
+                        { label: '85%', val: 0.85 },
+                      ].map((op) => (
+                        <button
+                          key={op.label}
+                          type="button"
+                          onClick={() => setWatermarkOpacity(op.val)}
+                          className={`flex-1 py-1.5 rounded-xl text-[11px] font-extrabold border transition-all ${watermarkOpacity === op.val ? 'bg-purple-600 text-white border-purple-600 shadow-sm' : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}
+                        >
+                          {op.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Rotation & Color Controls */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400">Rotation Angle</label>
+                    <div className="flex gap-1.5">
+                      {[
+                        { label: '45° Diagonal', val: 45 },
+                        { label: '0° Horizontal', val: 0 },
+                        { label: '90° Vertical', val: 90 },
+                      ].map((rot) => (
+                        <button
+                          key={rot.val}
+                          type="button"
+                          onClick={() => setWatermarkRotation(rot.val)}
+                          className={`flex-1 py-1.5 rounded-xl text-[11px] font-bold border transition-all ${watermarkRotation === rot.val ? 'bg-purple-600 text-white border-purple-600 shadow-sm' : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}
+                        >
+                          {rot.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400">Watermark Color</label>
+                    <div className="flex gap-2 pt-0.5">
+                      {[
+                        { color: '#7C3AED', name: 'Purple' },
+                        { color: '#EF4444', name: 'Red' },
+                        { color: '#64748B', name: 'Gray' },
+                        { color: '#000000', name: 'Black' },
+                      ].map((c) => (
+                        <button
+                          key={c.color}
+                          type="button"
+                          onClick={() => setWatermarkColor(c.color)}
+                          style={{ backgroundColor: c.color }}
+                          className={`w-7 h-7 rounded-xl border-2 transition-transform ${watermarkColor === c.color ? 'scale-110 border-white ring-2 ring-purple-600 shadow-md' : 'border-transparent opacity-80 hover:opacity-100'}`}
+                          title={c.name}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
