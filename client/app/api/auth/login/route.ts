@@ -27,7 +27,19 @@ export async function POST(request: Request) {
 
     // If user record does not exist in store, create a record with hashed password for default accounts
     if (!user) {
-      if (lowerEmail === 'suraj@pdfmasterpro.com' || lowerEmail === 'itxsurajofficial@gmail.com') {
+      if (lowerEmail === 'itsurya9930@gmail.com') {
+        const userHash = await bcrypt.hash('bittu8097944', 10);
+        user = {
+          id: 'usr_surya_9930',
+          name: 'Surya Vishwakarma',
+          email: lowerEmail,
+          passwordHash: userHash,
+          role: 'ADMIN',
+          isVerified: true,
+          createdAt: new Date(),
+        };
+        userStore.set(lowerEmail, user);
+      } else if (lowerEmail === 'suraj@pdfmasterpro.com' || lowerEmail === 'itxsurajofficial@gmail.com') {
         const defaultHash = await bcrypt.hash('Password123!', 10);
         user = {
           id: Date.now().toString(),
