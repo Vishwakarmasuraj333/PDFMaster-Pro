@@ -1,6 +1,7 @@
 import React from 'react';
 import './globals.css';
 import { ThemeProvider } from '../context/theme-context';
+import CookieBanner from '../components/cookie-banner';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -20,6 +21,7 @@ export default function RootLayout({
       <body>
         <ThemeProvider>
           {children}
+          <CookieBanner />
         </ThemeProvider>
       </body>
     </html>
