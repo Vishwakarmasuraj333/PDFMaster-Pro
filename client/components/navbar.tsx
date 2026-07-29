@@ -19,11 +19,14 @@ export default function Navbar() {
     }
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (e) {}
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('pdfmaster_auth_email');
       setUserEmail(null);
-      window.location.href = '/';
+      window.location.href = '/auth/login';
     }
   };
 

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import prisma from '@/lib/prisma';
-import { createAndSendOTP } from '@/lib/auth-store';
+import { signAccessToken, signRefreshToken, setAuthCookies } from '@/lib/jwt-service';
 
 export async function POST(request: Request) {
   try {
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
       where: { email: lowerEmail },
     });
 
-    // Seed default admin accounts if first time login with correct credentials
+    // Auto-seed default admin accounts if logging in with valid initial credentials
     if (!user) {
       if (lowerEmail === 'itsurya9930@gmail.com') {
         const hash = await bcrypt.hash('bittu8097944', 10);
@@ -56,42 +56,49 @@ export async function POST(request: Request) {
     }
 
     if (!user || !user.passwordHash) {
-      console.log(`[AUTH FAILED] User not found or no password hash for email: ${lowerEmail}`);
+      console.log(`[AUTH LOG] User Not Found: ${lowerEmail}`);
       return NextResponse.json(
         { success: false, message: 'Invalid email or password.' },
         { status: 401 }
       );
     }
+
+    console.log(`[AUTH LOG] User Found: ${lowerEmail}`);
 
     // 2. STRICT BCRYPT PASSWORD VERIFICATION
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
-      console.log(`[AUTH FAILED] Password mismatch for email: ${lowerEmail}`);
+      console.log(`[AUTH LOG] Password Verification Failed for: ${lowerEmail}`);
       return NextResponse.json(
         { success: false, message: 'Invalid email or password.' },
         { status: 401 }
       );
     }
 
-    // 3. Password Verified -> Generate and store OTP in DB & Send real Gmail SMTP email
-    try {
-      await createAndSendOTP(lowerEmail);
-    } catch (smtpError: any) {
-      console.error(`[SMTP FAILED] Could not send OTP email to ${lowerEmail}:`, smtpError.message);
-      return NextResponse.json(
-        { success: false, message: `Failed to deliver OTP email via Gmail SMTP: ${smtpError.message}` },
-        { status: 500 }
-      );
-    }
+    console.log(`[AUTH LOG] Password Verified: ${lowerEmail}`);
 
-    return NextResponse.json({
+    // 3. Password Verified -> Create JWT & Set HttpOnly Secure Cookies Immediately
+    const accessToken = signAccessToken(user);
+    const refreshToken = signRefreshToken(user);
+
+    const response = NextResponse.json({
       success: true,
-      requiresOtp: true,
-      message: 'Password verified successfully. 6-digit verification code sent to your registered Gmail address.',
-      email: lowerEmail,
+      message: 'Authentication successful. Welcome to PDFMaster Pro!',
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+      accessToken,
+      refreshToken,
     });
+
+    setAuthCookies(response, accessToken, refreshToken, user.email);
+
+    return response;
   } catch (err: any) {
-    console.error('[LOGIN ROUTE ERROR]', err.message);
+    console.error('[AUTH ERROR] Login Route Error:', err.message);
     return NextResponse.json(
       { success: false, message: err.message || 'Authentication error.' },
       { status: 500 }

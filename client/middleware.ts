@@ -41,15 +41,23 @@ export function middleware(request: NextRequest) {
     userRole = 'ADMIN';
   }
 
-  // 1. Protect /admin routes (ADMIN role required, HTTP 403 for non-admins)
+  // 1. If user is already authenticated and visits /auth/login or /auth/signup, redirect to /tools
+  if (isAuthenticated && (path === '/auth/login' || path === '/auth/signup')) {
+    console.log(`[AUTH LOG] Authenticated user (${userEmail}) tried visiting ${path} -> Redirecting to /tools`);
+    return NextResponse.redirect(new URL('/tools', request.url));
+  }
+
+  // 2. Protect /admin routes (ADMIN role required, HTTP 403 for non-admins)
   if (path.startsWith('/admin')) {
     if (!isAuthenticated) {
+      console.log(`[AUTH LOG] Unauthenticated access to /admin -> Redirecting to /auth/login`);
       const url = new URL('/auth/login', request.url);
       url.searchParams.set('redirect', path);
       return NextResponse.redirect(url);
     }
 
     if (userRole !== 'ADMIN') {
+      console.log(`[AUTH LOG] Non-admin access to /admin -> Returning HTTP 403 Forbidden`);
       return new NextResponse(
         `<!DOCTYPE html>
         <html>
@@ -69,20 +77,23 @@ export function middleware(request: NextRequest) {
         }
       );
     }
+    console.log(`[AUTH LOG] Middleware Authorized for Admin: ${userEmail}`);
   }
 
-  // 2. Protect /tools routes (Authentication required)
+  // 3. Protect /tools routes (Authentication required)
   if (path.startsWith('/tools')) {
     if (!isAuthenticated) {
+      console.log(`[AUTH LOG] Unauthenticated access to /tools -> Redirecting to /auth/login`);
       const url = new URL('/auth/login', request.url);
       url.searchParams.set('redirect', path);
       return NextResponse.redirect(url);
     }
+    console.log(`[AUTH LOG] Middleware Authorized for: ${userEmail}`);
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/tools/:path*'],
+  matcher: ['/admin/:path*', '/tools/:path*', '/auth/login', '/auth/signup'],
 };

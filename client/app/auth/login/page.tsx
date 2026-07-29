@@ -3,7 +3,7 @@
 import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Sparkles, ArrowLeft, Mail, Lock, LogIn, KeyRound, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Sparkles, ArrowLeft, Mail, Lock, LogIn, KeyRound, Loader2, AlertCircle } from 'lucide-react';
 
 function LoginContent() {
   const router = useRouter();
@@ -23,12 +23,14 @@ function LoginContent() {
 
     if (!email || !password) {
       setErrorMessage('Please enter both your email address and password.');
+      setPassword(''); // Clear password input on attempt
       setLoading(false);
       return;
     }
 
     if (password.length < 6) {
       setErrorMessage('Invalid password. Password must be at least 6 characters long.');
+      setPassword(''); // Clear password input on attempt
       setLoading(false);
       return;
     }
@@ -43,21 +45,28 @@ function LoginContent() {
 
       const data = await res.json().catch(() => ({}));
 
-      // STRICT BACKEND VERIFICATION - If credentials are bad, throw error and STOP
+      // Clear password input immediately after attempt (success or failure)
+      setPassword('');
+
+      // STRICT BACKEND VERIFICATION - If credentials are bad (401/403/500), show error & STOP
       if (!res.ok || !data.success) {
         throw new Error(data.message || 'Invalid email or password.');
       }
 
-      // Save email for OTP verification step ONLY AFTER SUCCESSFUL PASSWORD VERIFICATION
+      // Save email for session context
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('pdfmaster_auth_email', email.trim());
       }
 
-      // Redirect to OTP verification page ONLY AFTER VALID PASSWORD
-      router.push(`/auth/verify-otp?method=password${redirectTarget ? `&redirect=${encodeURIComponent(redirectTarget)}` : ''}`);
+      console.log('[AUTH LOG] Redirected to /tools');
+
+      // SUCCESSFUL AUTHENTICATION -> Redirect directly to /tools (or requested redirect target)
+      const targetUrl = redirectTarget || '/tools';
+      window.location.href = targetUrl;
 
     } catch (err: any) {
       setErrorMessage(err.message || 'Invalid email or password.');
+      setPassword(''); // Ensure password is cleared on error
     } finally {
       setLoading(false);
     }
@@ -114,7 +123,8 @@ function LoginContent() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="your.email@example.com"
-                  className="w-full pl-9 pr-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                  disabled={loading}
+                  className="w-full pl-9 pr-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 disabled:opacity-50"
                 />
               </div>
             </div>
@@ -134,7 +144,8 @@ function LoginContent() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full pl-9 pr-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                  disabled={loading}
+                  className="w-full pl-9 pr-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 disabled:opacity-50"
                 />
               </div>
             </div>
@@ -145,6 +156,7 @@ function LoginContent() {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
+                  disabled={loading}
                   className="w-4 h-4 rounded text-amber-500 focus:ring-amber-400 border-slate-300 dark:border-slate-700"
                 />
                 <span className="text-xs text-slate-600 dark:text-slate-400 font-semibold">Remember Me</span>
@@ -158,7 +170,7 @@ function LoginContent() {
             >
               {loading ? (
                 <>
-                  <KeyRound className="w-4 h-4 animate-spin" /> Verifying Password...
+                  <Loader2 className="w-4 h-4 animate-spin" /> Verifying Credentials...
                 </>
               ) : (
                 <>
@@ -181,7 +193,7 @@ function LoginContent() {
             <button
               onClick={() => handleSocialLogin('Google')}
               disabled={loading}
-              className="py-3 px-4 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-xs font-extrabold text-slate-800 dark:text-slate-200 transition-all flex items-center justify-center gap-2 shadow-sm"
+              className="py-3 px-4 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-xs font-extrabold text-slate-800 dark:text-slate-200 transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -194,7 +206,7 @@ function LoginContent() {
             <button
               onClick={() => handleSocialLogin('GitHub')}
               disabled={loading}
-              className="py-3 px-4 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-xs font-extrabold text-slate-800 dark:text-slate-200 transition-all flex items-center justify-center gap-2 shadow-sm"
+              className="py-3 px-4 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-xs font-extrabold text-slate-800 dark:text-slate-200 transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
             >
               <svg className="w-4 h-4 fill-current text-slate-900 dark:text-white" viewBox="0 0 24 24">
                 <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
