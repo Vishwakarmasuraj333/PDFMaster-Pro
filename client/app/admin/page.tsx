@@ -2,14 +2,13 @@
 
 import React, { useState } from 'react';
 import { 
-  Users, DollarSign, Cpu, HardDrive, Terminal, 
-  TrendingUp, ShieldAlert, CheckCircle, Search, Filter,
-  ShieldCheck, RefreshCw, Activity, Lock, Database, UserCheck, Key
+  Users, DollarSign, Activity, TrendingUp, ShieldCheck, CheckCircle, Search,
+  Shield, ExternalLink, Lock, CheckCircle2, XCircle, KeyRound, UserCheck
 } from 'lucide-react';
 
 export default function AdminDashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'ALL' | 'ADMIN' | 'USER'>('ALL');
+  const [roleFilter, setRoleFilter] = useState<'ALL' | 'ADMIN' | 'CO_OPERATOR' | 'USER'>('ALL');
 
   const metrics = [
     { title: 'Total Registered Users', value: '14,820', change: '+18% this mo.', icon: Users },
@@ -18,22 +17,60 @@ export default function AdminDashboardPage() {
     { title: 'Database & Node Health', value: '99.98%', change: 'Optimal Status', icon: Activity },
   ];
 
+  const teamMembers = [
+    {
+      name: 'Suraj Vishwakarma',
+      email: 'suraj@pdfmasterpro.com',
+      roleTitle: 'Super Admin',
+      badgeColor: 'bg-amber-400 text-slate-900 border-amber-400',
+      github: 'https://github.com/Vishwakarmasuraj333',
+      permissions: [
+        'Full System & Database Control',
+        'Role Management & User Granting',
+        'Master Security & Environment Secrets',
+        'Payment Gateway & Stripe Keys',
+      ],
+      isSuperAdmin: true,
+    },
+    {
+      name: 'Mamta Yadav',
+      email: 'mamtayadav@pdfmasterpro.com',
+      roleTitle: 'Co-Operator',
+      badgeColor: 'bg-indigo-500 text-white border-indigo-400',
+      github: 'https://github.com/MamtaYdvTech1',
+      permissions: [
+        'Manage Users & Accounts',
+        'View Platform Analytics & Metrics',
+        'View System Activity Logs',
+        'Manage User Subscriptions',
+      ],
+      restrictions: [
+        'Cannot delete Super Admin',
+        'Cannot modify Super Admin role',
+        'Cannot access master security settings',
+      ],
+      isSuperAdmin: false,
+    },
+  ];
+
   const initialUsers = [
     { id: 1, name: 'Suraj Vishwakarma', email: 'suraj@pdfmasterpro.com', role: 'ADMIN', plan: 'Enterprise Unlimited', status: 'ACTIVE', pdfsCount: 1420, registered: '2026-01-10' },
-    { id: 2, name: 'Alex Morgan', email: 'alex@enterprise.com', role: 'USER', plan: 'Pro Monthly', status: 'ACTIVE', pdfsCount: 230, registered: '2026-03-14' },
-    { id: 3, name: 'Sophia Chen', email: 'sophia@techcorp.io', role: 'USER', plan: 'Enterprise Unlimited', status: 'ACTIVE', pdfsCount: 512, registered: '2026-04-02' },
-    { id: 4, name: 'Marcus Vance', email: 'marcus@startup.co', role: 'USER', plan: 'Free', status: 'SUSPENDED', pdfsCount: 18, registered: '2026-05-19' },
-    { id: 5, name: 'Elena Rostova', email: 'elena@designhub.com', role: 'USER', plan: 'Pro Monthly', status: 'ACTIVE', pdfsCount: 88, registered: '2026-06-01' },
-    { id: 6, name: 'David Miller', email: 'david@fintech.net', role: 'USER', plan: 'Free', status: 'ACTIVE', pdfsCount: 42, registered: '2026-07-11' },
+    { id: 2, name: 'Mamta Yadav', email: 'mamtayadav@pdfmasterpro.com', role: 'CO_OPERATOR', plan: 'Enterprise Team', status: 'ACTIVE', pdfsCount: 980, registered: '2026-02-01' },
+    { id: 3, name: 'Alex Morgan', email: 'alex@enterprise.com', role: 'USER', plan: 'Pro Monthly', status: 'ACTIVE', pdfsCount: 230, registered: '2026-03-14' },
+    { id: 4, name: 'Sophia Chen', email: 'sophia@techcorp.io', role: 'USER', plan: 'Enterprise Unlimited', status: 'ACTIVE', pdfsCount: 512, registered: '2026-04-02' },
+    { id: 5, name: 'Marcus Vance', email: 'marcus@startup.co', role: 'USER', plan: 'Free', status: 'SUSPENDED', pdfsCount: 18, registered: '2026-05-19' },
+    { id: 6, name: 'Elena Rostova', email: 'elena@designhub.com', role: 'USER', plan: 'Pro Monthly', status: 'ACTIVE', pdfsCount: 88, registered: '2026-06-01' },
   ];
 
   const [usersList, setUsersList] = useState(initialUsers);
 
   const toggleUserStatus = (id: number) => {
     setUsersList((prev) =>
-      prev.map((u) =>
-        u.id === id ? { ...u, status: u.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE' } : u
-      )
+      prev.map((u) => {
+        // Protect Super Admin from deletion/suspension
+        if (u.role === 'ADMIN') return u;
+        return u.id === id ? { ...u, status: u.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE' } : u;
+      })
     );
   };
 
@@ -45,16 +82,16 @@ export default function AdminDashboardPage() {
   });
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto text-slate-100">
+    <div className="space-y-10 max-w-7xl mx-auto text-slate-100">
       
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-800 pb-6 gap-4">
         <div>
           <div className="inline-flex items-center gap-2 text-[10px] font-black px-3 py-1 rounded-full bg-amber-400/20 text-amber-400 border border-amber-400/30 uppercase tracking-widest">
-            <ShieldCheck className="w-3.5 h-3.5 text-amber-400" /> SUPER ADMINISTRATOR DASHBOARD
+            <ShieldCheck className="w-3.5 h-3.5 text-amber-400" /> SUPER ADMINISTRATOR PORTAL
           </div>
           <h1 className="text-3xl font-black text-white mt-2">Platform Control Center</h1>
-          <p className="text-xs text-slate-400">Full system metrics and user management for Suraj Vishwakarma</p>
+          <p className="text-xs text-slate-400">Full system metrics, user roles, and team administration for Suraj Vishwakarma</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -85,16 +122,73 @@ export default function AdminDashboardPage() {
         })}
       </div>
 
+      {/* Admin Team & Access Control Section */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-xl font-black text-white flex items-center gap-2">
+            <Shield className="w-5 h-5 text-amber-400" /> Admin Team & Privilege Hierarchy
+          </h2>
+          <p className="text-xs text-slate-400">Role-based permission matrix and co-operator credentials.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {teamMembers.map((member, idx) => (
+            <div key={idx} className="p-6 rounded-3xl bg-[#161B22] border border-slate-800 space-y-5 shadow-xl relative overflow-hidden">
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <span className={`inline-block text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider border ${member.badgeColor}`}>
+                    {member.roleTitle}
+                  </span>
+                  <h3 className="text-xl font-black text-white pt-1">{member.name}</h3>
+                  <p className="text-xs font-semibold text-slate-400">{member.email}</p>
+                </div>
+                <a
+                  href={member.github}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-xs font-bold text-amber-400 hover:underline bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-xl"
+                >
+                  GitHub Profile <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-slate-800">
+                <h4 className="text-xs font-extrabold text-slate-300 uppercase tracking-wider">Granted Permissions:</h4>
+                <ul className="space-y-1.5 text-xs text-slate-400 font-semibold">
+                  {member.permissions.map((perm, pIdx) => (
+                    <li key={pIdx} className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" /> {perm}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {member.restrictions && (
+                <div className="space-y-2 pt-2 border-t border-slate-800/80">
+                  <h4 className="text-xs font-extrabold text-amber-400 uppercase tracking-wider">Role Restrictions (RBAC Rules):</h4>
+                  <ul className="space-y-1.5 text-xs text-slate-400 font-semibold">
+                    {member.restrictions.map((rest, rIdx) => (
+                      <li key={rIdx} className="flex items-center gap-2">
+                        <Lock className="w-4 h-4 text-amber-500 shrink-0" /> {rest}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* User Management Section */}
       <div className="p-6 md:p-8 rounded-3xl bg-[#161B22] border border-slate-800 space-y-6 shadow-2xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h3 className="text-xl font-black text-white">Manage All Registered Users</h3>
+            <h3 className="text-xl font-black text-white">Registered Users Directory</h3>
             <p className="text-xs text-slate-400">Total {usersList.length} Accounts Monitored</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {/* Search */}
             <div className="relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
               <input
@@ -106,15 +200,15 @@ export default function AdminDashboardPage() {
               />
             </div>
 
-            {/* Role Filter */}
             <select
               value={roleFilter}
               onChange={(e: any) => setRoleFilter(e.target.value)}
               className="py-2 px-3 rounded-2xl bg-slate-900 border border-slate-700 text-xs font-semibold text-white focus:outline-none focus:border-amber-400"
             >
               <option value="ALL">All Roles</option>
-              <option value="ADMIN">ADMIN Only</option>
-              <option value="USER">USER Only</option>
+              <option value="ADMIN">ADMIN</option>
+              <option value="CO_OPERATOR">CO_OPERATOR</option>
+              <option value="USER">USER</option>
             </select>
           </div>
         </div>
@@ -151,6 +245,8 @@ export default function AdminDashboardPage() {
                     <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider ${
                       u.role === 'ADMIN'
                         ? 'bg-amber-400/20 text-amber-400 border border-amber-400/40'
+                        : u.role === 'CO_OPERATOR'
+                        ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-400/40'
                         : 'bg-slate-800 text-slate-300'
                     }`}>
                       {u.role}
@@ -172,16 +268,20 @@ export default function AdminDashboardPage() {
                   </td>
 
                   <td className="py-4 px-3 text-right space-x-2">
-                    <button
-                      onClick={() => toggleUserStatus(u.id)}
-                      className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all ${
-                        u.status === 'ACTIVE'
-                          ? 'bg-red-950/60 hover:bg-red-900 text-red-400 border border-red-800'
-                          : 'bg-emerald-950/60 hover:bg-emerald-900 text-emerald-400 border border-emerald-800'
-                      }`}
-                    >
-                      {u.status === 'ACTIVE' ? 'Suspend' : 'Activate'}
-                    </button>
+                    {u.role !== 'ADMIN' ? (
+                      <button
+                        onClick={() => toggleUserStatus(u.id)}
+                        className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer ${
+                          u.status === 'ACTIVE'
+                            ? 'bg-red-950/60 hover:bg-red-900 text-red-400 border border-red-800'
+                            : 'bg-emerald-950/60 hover:bg-emerald-900 text-emerald-400 border border-emerald-800'
+                        }`}
+                      >
+                        {u.status === 'ACTIVE' ? 'Suspend' : 'Activate'}
+                      </button>
+                    ) : (
+                      <span className="text-[10px] font-bold text-slate-500">Protected Super Admin</span>
+                    )}
                   </td>
                 </tr>
               ))}
