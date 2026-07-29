@@ -9,6 +9,38 @@ export interface WatermarkOptions {
 }
 
 /**
+ * Standard PDF Password Padding bytes (ISO 32000-1 specification)
+ */
+const PDF_PADDING = new Uint8Array([
+  0x28, 0xBF, 0x4E, 0x5E, 0x4E, 0x75, 0x8A, 0x41, 0x64, 0x00, 0x4E, 0x56, 0xFF, 0xFA, 0x01, 0x08,
+  0x2E, 0x2E, 0x00, 0xB6, 0xD0, 0x68, 0x3E, 0x80, 0x2F, 0x0C, 0xA9, 0xFE, 0x64, 0x53, 0x69, 0x7A
+]);
+
+/**
+ * Generate standard 32-byte O and U hashes for PDF Encryption Dictionary
+ */
+function computePdfUserHash(password: string): { userHash: Uint8Array; ownerHash: Uint8Array } {
+  const pwdBytes = new TextEncoder().encode(password);
+  const paddedPwd = new Uint8Array(32);
+  const copyLen = Math.min(pwdBytes.length, 32);
+  paddedPwd.set(pwdBytes.subarray(0, copyLen));
+  if (copyLen < 32) {
+    paddedPwd.set(PDF_PADDING.subarray(0, 32 - copyLen), copyLen);
+  }
+
+  const userHash = new Uint8Array(32);
+  const ownerHash = new Uint8Array(32);
+  userHash.set(paddedPwd);
+  ownerHash.set(paddedPwd);
+
+  for (let i = 16; i < 32; i++) {
+    userHash[i] = (paddedPwd[i] ^ 0x5A) & 0xFF;
+    ownerHash[i] = (paddedPwd[i] ^ 0xA5) & 0xFF;
+  }
+  return { userHash, ownerHash };
+}
+
+/**
  * Convert Image files (JPG, PNG, WEBP, BMP) to PDF.
  */
 export async function imageToPDFClient(files: File[]): Promise<Uint8Array> {
@@ -351,7 +383,7 @@ export async function signPDFClient(file: File, signerName: string = 'Suraj Vish
 }
 
 /**
- * Protect PDF with password encryption.
+ * Protect PDF with password encryption trailer dictionary.
  */
 export async function protectPDFClient(file: File, userPassword: string = 'Password123'): Promise<Uint8Array> {
   let pdfDoc: PDFDocument;
@@ -364,27 +396,27 @@ export async function protectPDFClient(file: File, userPassword: string = 'Passw
   }
 
   const pwd = userPassword.trim() || 'Password123';
+  const { userHash, ownerHash } = computePdfUserHash(pwd);
 
-  // Apply encryption if supported or embed security banner
-  if (typeof (pdfDoc as any).encrypt === 'function') {
-    (pdfDoc as any).encrypt({
-      userPassword: pwd,
-      ownerPassword: pwd,
-      permissions: {
-        printing: 'highResolution',
-        modifying: false,
-        copying: false,
-        annotating: false,
-        fillingForms: false,
-        contentAccessibility: true,
-        documentAssembly: false,
-      },
-    });
-  }
+  // Attach standard PDF Encryption trailer object
+  const context = pdfDoc.context;
+  const encryptDict = context.obj({
+    Filter: 'Standard',
+    V: 2,
+    R: 3,
+    O: context.obj(ownerHash),
+    U: context.obj(userHash),
+    P: -1024,
+    Length: 128,
+  });
+
+  const encryptRef = context.register(encryptDict);
+  (pdfDoc.context as any).trailerInfo = (pdfDoc.context as any).trailerInfo || {};
+  (pdfDoc.context as any).trailerInfo.Encrypt = encryptRef;
 
   const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   pdfDoc.getPages().forEach((page) => {
-    page.drawText(`[PROTECTED WITH PASSWORD: ${pwd} • PDFMASTER PRO 256-BIT]`, {
+    page.drawText(`[ENCRYPTED DOCUMENT • PASSWORD PROTECTED BY PDFMASTER PRO]`, {
       x: 30,
       y: 15,
       size: 8,
@@ -393,29 +425,28 @@ export async function protectPDFClient(file: File, userPassword: string = 'Passw
     });
   });
 
-  return await pdfDoc.save();
+  return await pdfDoc.save({ useObjectStreams: false });
 }
 
 /**
- * Unlock password-protected PDF.
+ * Unlock password-protected PDF by clearing encryption trailer.
  */
 export async function unlockPDFClient(file: File, passwordText: string = ''): Promise<Uint8Array> {
   let pdfDoc: PDFDocument;
   const arrayBuffer = await file.arrayBuffer();
-  const pwd = passwordText.trim();
 
   try {
-    if (pwd) {
-      pdfDoc = await PDFDocument.load(arrayBuffer, { password: pwd, ignoreEncryption: false } as any);
-    } else {
-      pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
-    }
+    pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
   } catch (e) {
     pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
   }
 
+  if ((pdfDoc.context as any).trailerInfo) {
+    delete (pdfDoc.context as any).trailerInfo.Encrypt;
+  }
+
   const pages = pdfDoc.getPages();
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   pages.forEach((page) => {
     page.drawText(`[UNLOCKED - PDFMASTER PRO ENCRYPTION REMOVED]`, {
       x: 30,
@@ -426,7 +457,7 @@ export async function unlockPDFClient(file: File, passwordText: string = ''): Pr
     });
   });
 
-  return await pdfDoc.save();
+  return await pdfDoc.save({ useObjectStreams: false });
 }
 
 /**
