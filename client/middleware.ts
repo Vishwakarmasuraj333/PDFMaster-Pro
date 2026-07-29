@@ -5,8 +5,11 @@ function decodeJwtPayload(token: string): any {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
-    const base64Url = parts[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    let base64Url = parts[1];
+    let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4 !== 0) {
+      base64 += '=';
+    }
     const jsonPayload = decodeURIComponent(
       atob(base64)
         .split('')
@@ -43,7 +46,16 @@ export function middleware(request: NextRequest) {
     isValidToken = true;
   }
 
-  if (userEmail && (userEmail.includes('admin') || userEmail.includes('suraj') || userEmail === 'itsurya9930@gmail.com' || userEmail === 'itxsurajofficial@gmail.com')) {
+  const lowerEmail = userEmail.toLowerCase().trim();
+  const isDefaultAdmin = lowerEmail && (
+    lowerEmail.includes('admin') || 
+    lowerEmail.includes('suraj') || 
+    lowerEmail === 'itsurya9930@gmail.com' || 
+    lowerEmail === 'itxsurajofficial@gmail.com' ||
+    lowerEmail === 'suraj@pdfmasterpro.com'
+  );
+
+  if (isDefaultAdmin) {
     userRole = 'ADMIN';
   }
 
@@ -57,27 +69,39 @@ export function middleware(request: NextRequest) {
     }
 
     if (userRole !== 'ADMIN') {
-      console.log(`[AUTH LOG] Non-admin access to /admin -> Returning HTTP 403 Forbidden`);
+      console.log(`[AUTH LOG] Non-admin access to /admin -> Returning HTTP 403 Forbidden for: ${userEmail}`);
       return new NextResponse(
         `<!DOCTYPE html>
-        <html>
-        <head><title>403 Forbidden - PDFMaster Pro</title></head>
-        <body style="background:#090d16;color:#f8fafc;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
-          <div style="text-align:center;padding:40px;background:#131b2e;border:1px solid #1e293b;border-radius:24px;max-width:450px;">
-            <h1 style="color:#ef4444;font-size:48px;margin:0 0 10px 0;">403</h1>
-            <h2 style="font-size:20px;margin:0 0 10px 0;">Forbidden: Admin Access Restricted</h2>
-            <p style="color:#94a3b8;font-size:13px;line-height:1.5;">You do not have administrative privileges to view this page. Access is strictly reserved for PDFMaster Pro administrators.</p>
-            <a href="/" style="display:inline-block;margin-top:20px;padding:12px 24px;background:#6366f1;color:#fff;text-decoration:none;border-radius:12px;font-weight:bold;font-size:13px;">Return to Homepage</a>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <title>403 Forbidden - PDFMaster Pro</title>
+          <style>
+            body { background:#090d16; color:#f8fafc; font-family:system-ui, -apple-system, sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; margin:0; }
+            .card { text-align:center; padding:40px; background:#131b2e; border:1px solid #1e293b; border-radius:24px; max-width:450px; box-shadow:0 20px 40px rgba(0,0,0,0.5); }
+            h1 { color:#ef4444; font-size:48px; margin:0 0 10px 0; font-weight:900; }
+            h2 { font-size:20px; margin:0 0 12px 0; color:#ffffff; font-weight:800; }
+            p { color:#94a3b8; font-size:13px; line-height:1.6; margin-bottom:24px; }
+            a { display:inline-block; padding:12px 24px; background:#f4c430; color:#0f172a; text-decoration:none; border-radius:14px; font-weight:800; font-size:13px; }
+            a:hover { background:#fbbf24; }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <h1>403</h1>
+            <h2>Forbidden: Unauthorized Access</h2>
+            <p>You do not have administrative privileges to view this portal. Access is strictly reserved for PDFMaster Pro administrators.</p>
+            <a href="/">Return to Homepage</a>
           </div>
         </body>
         </html>`,
         {
           status: 403,
-          headers: { 'Content-Type': 'text/html' },
+          headers: { 'Content-Type': 'text/html; charset=utf-8' },
         }
       );
     }
-    console.log(`[AUTH LOG] Middleware Authorized for Admin: ${userEmail}`);
+    console.log(`[AUTH LOG] Middleware Authorized Admin Access for: ${userEmail}`);
   }
 
   // 2. Protect /tools routes (Authentication required)
@@ -88,7 +112,7 @@ export function middleware(request: NextRequest) {
       url.searchParams.set('redirect', path);
       return NextResponse.redirect(url);
     }
-    console.log(`[AUTH LOG] Middleware Authorized for: ${userEmail}`);
+    console.log(`[AUTH LOG] Middleware Authorized Tools Access for: ${userEmail}`);
   }
 
   return NextResponse.next();

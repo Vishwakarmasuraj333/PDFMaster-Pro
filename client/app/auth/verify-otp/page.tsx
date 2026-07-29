@@ -12,6 +12,7 @@ export default function VerifyOtpPage() {
   const [verifiedSuccess, setVerifiedSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [redirectTarget, setRedirectTarget] = useState('');
+  const [method, setMethod] = useState('');
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
@@ -21,6 +22,7 @@ export default function VerifyOtpPage() {
 
       const params = new URLSearchParams(window.location.search);
       setRedirectTarget(params.get('redirect') || '');
+      setMethod(params.get('method') || '');
     }
 
     const timer = setInterval(() => {
@@ -84,10 +86,15 @@ export default function VerifyOtpPage() {
       setVerifiedSuccess(true);
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('pdfmaster_auth_email', email);
+        sessionStorage.setItem('pdfmaster_verified_otp', enteredOtp);
       }
 
       setTimeout(() => {
-        window.location.href = redirectTarget || '/tools';
+        if (method === 'reset') {
+          window.location.href = '/auth/reset-password';
+        } else {
+          window.location.href = redirectTarget || '/tools';
+        }
       }, 500);
     } catch (err: any) {
       setErrorMessage(err.message || 'Verification failed. Please try again.');
@@ -139,7 +146,7 @@ export default function VerifyOtpPage() {
 
           {verifiedSuccess && (
             <div className="p-4 rounded-2xl bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-extrabold flex items-center justify-center gap-2 animate-bounce">
-              <CheckCircle2 className="w-5 h-5 text-emerald-500" /> OTP Verified! Redirecting to PDF Tools...
+              <CheckCircle2 className="w-5 h-5 text-emerald-500" /> OTP Verified! Redirecting...
             </div>
           )}
 
@@ -181,7 +188,7 @@ export default function VerifyOtpPage() {
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="w-4 h-4" /> Verify OTP & Start Using Tools
+                  <CheckCircle2 className="w-4 h-4" /> Verify OTP & Continue
                 </>
               )}
             </button>

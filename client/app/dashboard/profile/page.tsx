@@ -1,12 +1,27 @@
 "use client";
 
-import React, { useState } from 'react';
-import { User, Mail, Shield, Save, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Mail, Shield, Save, CheckCircle2, Loader2 } from 'lucide-react';
 
 export default function ProfilePage() {
-  const [name, setName] = useState('Suraj Vishwakarma');
-  const [email, setEmail] = useState('suraj@pdfmasterpro.com');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState('USER');
+  const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.user) {
+          setName(data.user.name || '');
+          setEmail(data.user.email || '');
+          setRole(data.user.role || 'USER');
+        }
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -14,11 +29,19 @@ export default function ProfilePage() {
     setTimeout(() => setSaved(false), 3000);
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
       <div className="space-y-2">
         <h1 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-          <User className="w-6 h-6 text-purple-600" /> User Profile
+          <User className="w-6 h-6 text-amber-500" /> User Profile
         </h1>
         <p className="text-xs text-slate-500">Manage your personal details and account credentials.</p>
       </div>
@@ -46,15 +69,22 @@ export default function ProfilePage() {
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full mt-1 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white"
+              disabled
+              className="w-full mt-1 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500 dark:text-slate-400 cursor-not-allowed"
             />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Account Role</label>
+            <div className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400/20 text-amber-600 dark:text-amber-400 border border-amber-400/30 text-xs font-black uppercase">
+              <Shield className="w-3.5 h-3.5" /> {role} Account
+            </div>
           </div>
         </div>
 
         <button
           type="submit"
-          className="px-6 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-md shadow-purple-500/20 flex items-center gap-2"
+          className="px-6 py-2.5 rounded-2xl bg-amber-400 hover:bg-amber-500 text-slate-900 font-extrabold text-xs shadow-md shadow-amber-400/20 flex items-center gap-2 cursor-pointer"
         >
           <Save className="w-4 h-4" /> Save Profile
         </button>

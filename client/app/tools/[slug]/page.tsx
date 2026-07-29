@@ -6,20 +6,27 @@ import Navbar from '../../../components/navbar';
 import Footer from '../../../components/footer';
 import PDFEditorSandbox from '../../../components/pdf-editor-sandbox';
 import { PDF_TOOLS } from '../../../lib/pdf-tools-data';
-import { Sparkles, ShieldCheck, Zap, ArrowLeft } from 'lucide-react';
+import { Sparkles, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default function SingleToolPage() {
   const params = useParams();
-  const slug = params.slug as string;
+  const rawSlug = (params.slug as string) || 'tool';
 
-  const tool = PDF_TOOLS.find((t) => t.slug === slug) || {
-    id: slug || 'tool',
-    slug: slug || 'tool',
-    title: slug ? slug.replace(/-/g, ' ').toUpperCase() : 'PDF Tool',
+  // Normalize slug & alias matching
+  let slug = rawSlug;
+  if (rawSlug === 'watermark-pdf') slug = 'add-watermark';
+  if (rawSlug === 'pdf-to-image') slug = 'pdf-to-jpg';
+  if (rawSlug === 'ai-summary') slug = 'ai-summarizer';
+  if (rawSlug === 'ai-chat-pdf') slug = 'ai-chat';
+
+  const tool = PDF_TOOLS.find((t) => t.slug === slug || t.id === slug) || {
+    id: rawSlug,
+    slug: rawSlug,
+    title: rawSlug.replace(/-/g, ' ').toUpperCase(),
     description: 'Execute instant PDF operations securely with PDFMaster Pro.',
-    category: 'organize',
-    categoryChip: 'Workflows',
+    category: 'organize' as const,
+    categoryChip: 'Workflows' as const,
     icon: 'Combine',
   };
 
@@ -33,7 +40,7 @@ export default function SingleToolPage() {
         <div>
           <Link
             href="/tools"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-amber-500 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" /> All PDF Tools
           </Link>
@@ -42,8 +49,8 @@ export default function SingleToolPage() {
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto space-y-4">
           {tool.badge && (
-            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-600 dark:text-purple-300 font-extrabold text-[10px]">
-              <Sparkles className="w-3 h-3" /> {tool.badge}
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-400/20 text-amber-500 font-extrabold text-[10px] border border-amber-400/30 uppercase tracking-widest">
+              <Sparkles className="w-3 h-3 text-amber-500" /> {tool.badge}
             </span>
           )}
           <h1 className="text-3xl sm:text-5xl font-black text-slate-900 dark:text-white">
@@ -60,7 +67,7 @@ export default function SingleToolPage() {
         {/* How it works info */}
         <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-6 pt-12 border-t border-slate-200 dark:border-slate-800">
           <div className="text-center space-y-2">
-            <div className="w-10 h-10 rounded-2xl bg-purple-100 dark:bg-purple-950 text-purple-600 dark:text-purple-400 mx-auto flex items-center justify-center font-black">
+            <div className="w-10 h-10 rounded-2xl bg-amber-400/20 text-amber-500 mx-auto flex items-center justify-center font-black">
               1
             </div>
             <h4 className="text-xs font-bold text-slate-900 dark:text-white">Select PDF Files</h4>
@@ -68,7 +75,7 @@ export default function SingleToolPage() {
           </div>
 
           <div className="text-center space-y-2">
-            <div className="w-10 h-10 rounded-2xl bg-purple-100 dark:bg-purple-950 text-purple-600 dark:text-purple-400 mx-auto flex items-center justify-center font-black">
+            <div className="w-10 h-10 rounded-2xl bg-amber-400/20 text-amber-500 mx-auto flex items-center justify-center font-black">
               2
             </div>
             <h4 className="text-xs font-bold text-slate-900 dark:text-white">Configure Options</h4>
@@ -76,7 +83,7 @@ export default function SingleToolPage() {
           </div>
 
           <div className="text-center space-y-2">
-            <div className="w-10 h-10 rounded-2xl bg-purple-100 dark:bg-purple-950 text-purple-600 dark:text-purple-400 mx-auto flex items-center justify-center font-black">
+            <div className="w-10 h-10 rounded-2xl bg-amber-400/20 text-amber-500 mx-auto flex items-center justify-center font-black">
               3
             </div>
             <h4 className="text-xs font-bold text-slate-900 dark:text-white">Download Output</h4>

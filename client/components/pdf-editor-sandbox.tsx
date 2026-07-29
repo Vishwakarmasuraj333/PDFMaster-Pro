@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Upload, File, CheckCircle2, Download, Trash2, RotateCw, 
@@ -28,6 +28,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
   const [aiResultText, setAiResultText] = useState<string | null>(null);
   const [exportedContent, setExportedContent] = useState<{ content: string; name: string; type: string } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Custom inputs
   const [watermarkText, setWatermarkText] = useState('Suraj Vishwakarma');
@@ -37,9 +38,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
   const [watermarkColor, setWatermarkColor] = useState('#7C3AED');
   const [watermarkPosition, setWatermarkPosition] = useState<'diagonal' | 'center' | 'top-left' | 'bottom-right'>('diagonal');
   const [passwordText, setPasswordText] = useState('');
-  const [repeatPasswordText, setRepeatPasswordText] = useState('');
   const [showPassword1, setShowPassword1] = useState(false);
-  const [showPassword2, setShowPassword2] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [signerName, setSignerName] = useState('Suraj Vishwakarma');
   const [rotateAngle, setRotateAngle] = useState(90);
@@ -47,6 +46,27 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
   const [targetLang, setTargetLang] = useState('Spanish');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check authentication on mount by calling /api/auth/me (reads HttpOnly cookies)
+  useEffect(() => {
+    const sessionEmail = typeof window !== 'undefined' ? sessionStorage.getItem('pdfmaster_auth_email') : null;
+    if (sessionEmail) {
+      setIsAuthenticated(true);
+      return;
+    }
+
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.user) {
+          setIsAuthenticated(true);
+          if (typeof window !== 'undefined' && data.user.email) {
+            sessionStorage.setItem('pdfmaster_auth_email', data.user.email);
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -84,8 +104,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
   const handleProcess = async () => {
     if (files.length === 0) return;
 
-    const authEmail = typeof window !== 'undefined' ? sessionStorage.getItem('pdfmaster_auth_email') : null;
-    if (!authEmail) {
+    if (!isAuthenticated) {
       setShowAuthModal(true);
       return;
     }
@@ -167,8 +186,27 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
           type: 'text/markdown'
         });
       } else if (toolSlug === 'ai-summarizer' || toolSlug === 'ai-chat') {
-        const { summary } = await aiSummarizePDFClient(firstFile);
-        setAiResultText(summary);
+        try {
+          const aiRes = await fetch('/api/ai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              filename: firstFile.name,
+              prompt: toolSlug === 'ai-chat' ? 'Analyze document text and provide a concise briefing.' : 'Summarize the document.',
+              mode: toolSlug === 'ai-chat' ? 'chat' : 'summarize',
+            }),
+          });
+          const aiData = await aiRes.json();
+          if (aiData.success && aiData.response) {
+            setAiResultText(aiData.response);
+          } else {
+            const { summary } = await aiSummarizePDFClient(firstFile);
+            setAiResultText(summary);
+          }
+        } catch (e) {
+          const { summary } = await aiSummarizePDFClient(firstFile);
+          setAiResultText(summary);
+        }
         resultBytes = await rotatePDFClient(firstFile, 0);
       } else if (toolSlug === 'translate-pdf') {
         resultBytes = await aiTranslatePDFClient(firstFile, targetLang);
@@ -248,7 +286,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 max-w-md mx-auto">
             Supports PDF, JPG, PNG, WEBP, Word, and Excel files up to 50MB. 100% private and secure.
           </p>
-          <button className="mt-6 px-6 py-3 rounded-2xl bg-amber-400 hover:bg-amber-500 text-slate-900 font-extrabold text-xs shadow-lg shadow-amber-400/20 transition-all">
+          <button className="mt-6 px-6 py-3 rounded-2xl bg-amber-400 hover:bg-amber-500 text-slate-900 font-extrabold text-xs shadow-lg shadow-amber-400/20 transition-all cursor-pointer">
             Choose Files
           </button>
         </div>
@@ -264,7 +302,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
             </div>
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline"
+              className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer"
             >
               + Add More Files
             </button>
@@ -304,7 +342,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
                 </div>
                 <button
                   onClick={() => removeFile(i)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors cursor-pointer"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -380,7 +418,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
                           key={s.val}
                           type="button"
                           onClick={() => setWatermarkSize(s.val)}
-                          className={`flex-1 py-1.5 rounded-xl text-[11px] font-extrabold border transition-all ${watermarkSize === s.val ? 'bg-amber-400 text-slate-900 border-amber-400 shadow-sm' : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}
+                          className={`flex-1 py-1.5 rounded-xl text-[11px] font-extrabold border transition-all cursor-pointer ${watermarkSize === s.val ? 'bg-amber-400 text-slate-900 border-amber-400 shadow-sm' : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}
                         >
                           {s.val}px
                         </button>
@@ -401,7 +439,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
                           key={op.label}
                           type="button"
                           onClick={() => setWatermarkOpacity(op.val)}
-                          className={`flex-1 py-1.5 rounded-xl text-[11px] font-extrabold border transition-all ${watermarkOpacity === op.val ? 'bg-amber-400 text-slate-900 border-amber-400 shadow-sm' : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}
+                          className={`flex-1 py-1.5 rounded-xl text-[11px] font-extrabold border transition-all cursor-pointer ${watermarkOpacity === op.val ? 'bg-amber-400 text-slate-900 border-amber-400 shadow-sm' : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}
                         >
                           {op.label}
                         </button>
@@ -449,7 +487,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
                     <button
                       type="button"
                       onClick={() => setShowPassword1(!showPassword1)}
-                      className="p-1.5 text-slate-400 hover:text-amber-500 absolute right-2.5"
+                      className="p-1.5 text-slate-400 hover:text-amber-500 absolute right-2.5 cursor-pointer"
                     >
                       {showPassword1 ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -467,7 +505,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
                   <button
                     key={deg}
                     onClick={() => setRotateAngle(deg)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border ${rotateAngle === deg ? 'bg-amber-400 text-slate-900 border-amber-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border cursor-pointer ${rotateAngle === deg ? 'bg-amber-400 text-slate-900 border-amber-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}
                   >
                     {deg}° Right
                   </button>
@@ -508,7 +546,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
           <div className="flex items-center justify-between pt-2">
             <button
               onClick={() => { setFiles([]); setProcessedBytes(null); setAiResultText(null); setExportedContent(null); }}
-              className="text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+              className="text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer"
             >
               Clear All
             </button>
@@ -517,7 +555,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
               <button
                 onClick={handleProcess}
                 disabled={isProcessing}
-                className="px-8 py-3 rounded-2xl bg-amber-400 hover:bg-amber-500 text-slate-900 font-extrabold text-xs shadow-xl shadow-amber-400/20 transition-all flex items-center gap-2"
+                className="px-8 py-3 rounded-2xl bg-amber-400 hover:bg-amber-500 text-slate-900 font-extrabold text-xs shadow-xl shadow-amber-400/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 Execute {toolTitle}
@@ -525,7 +563,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
             ) : (
               <button
                 onClick={handleDownload}
-                className="px-8 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-xl shadow-emerald-500/25 transition-all flex items-center gap-2"
+                className="px-8 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-xl shadow-emerald-500/25 transition-all flex items-center gap-2 cursor-pointer"
               >
                 <Download className="w-4 h-4" /> Download Processed Output
               </button>
@@ -563,7 +601,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
               </Link>
               <button
                 onClick={() => setShowAuthModal(false)}
-                className="w-full py-2.5 rounded-2xl text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                className="w-full py-2.5 rounded-2xl text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer"
               >
                 Cancel
               </button>
