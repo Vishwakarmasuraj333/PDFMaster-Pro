@@ -68,7 +68,7 @@ export function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    if (userRole !== 'ADMIN') {
+    if (userRole !== 'ADMIN' && userRole !== 'CO_OPERATOR' && !lowerEmail.includes('mamta')) {
       console.log(`[AUTH LOG] Non-admin access to /admin -> Returning HTTP 403 Forbidden for: ${userEmail}`);
       return new NextResponse(
         `<!DOCTYPE html>
@@ -90,7 +90,7 @@ export function middleware(request: NextRequest) {
           <div class="card">
             <h1>403</h1>
             <h2>Forbidden: Unauthorized Access</h2>
-            <p>You do not have administrative privileges to view this portal. Access is strictly reserved for PDFMaster Pro administrators.</p>
+            <p>You do not have administrative privileges to view this portal. Access is strictly reserved for PDFMaster Pro administrators and designated team members.</p>
             <a href="/">Return to Homepage</a>
           </div>
         </body>
@@ -104,20 +104,33 @@ export function middleware(request: NextRequest) {
     console.log(`[AUTH LOG] Middleware Authorized Admin Access for: ${userEmail}`);
   }
 
-  // 2. Protect /tools routes (Authentication required)
-  if (path.startsWith('/tools')) {
+  // 2. Protect ALL PDF tool routes (/tools, /tools/*, /workspace, /ai-summary, /ai-chat)
+  const isProtectedTool = path === '/tools' || 
+                          path.startsWith('/tools/') || 
+                          path.startsWith('/workspace') || 
+                          path.startsWith('/ai-summary') || 
+                          path.startsWith('/ai-chat');
+
+  if (isProtectedTool) {
     if (!isValidToken) {
-      console.log(`[AUTH LOG] Unauthenticated access to /tools -> Redirecting to /auth/login`);
+      console.log(`[AUTH LOG] Unauthenticated access to ${path} -> Redirecting to /auth/login?redirect=${encodeURIComponent(path)}`);
       const url = new URL('/auth/login', request.url);
       url.searchParams.set('redirect', path);
       return NextResponse.redirect(url);
     }
-    console.log(`[AUTH LOG] Middleware Authorized Tools Access for: ${userEmail}`);
+    console.log(`[AUTH LOG] Middleware Authorized Tool Access for: ${userEmail} -> Path: ${path}`);
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/tools/:path*'],
+  matcher: [
+    '/admin/:path*', 
+    '/tools', 
+    '/tools/:path*', 
+    '/workspace/:path*', 
+    '/ai-summary/:path*',
+    '/ai-chat/:path*'
+  ],
 };

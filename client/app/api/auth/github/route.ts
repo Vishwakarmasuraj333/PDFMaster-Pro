@@ -17,10 +17,13 @@ export async function GET(request: Request) {
     );
   }
 
+  // Include prompt=consent and allow_signup=true to force GitHub credential authorization screen
   const githubAuthUrl = `https://github.com/login/oauth/authorize?` +
     `client_id=${encodeURIComponent(githubClientId)}` +
     `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-    `&scope=${encodeURIComponent('user:email')}`;
+    `&scope=${encodeURIComponent('user:email')}` +
+    `&prompt=consent` +
+    `&allow_signup=true`;
 
   return NextResponse.redirect(githubAuthUrl);
 }
