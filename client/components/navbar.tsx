@@ -4,15 +4,13 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import MegaMenu from './mega-menu';
 import ThemeToggle from './theme-toggle';
-import { Sparkles, ChevronDown, Menu, X, User, LogOut, FileText, Settings, Shield } from 'lucide-react';
+import { Sparkles, ChevronDown, Menu, X, User, LogOut, FileText, Settings } from 'lucide-react';
 
 export default function Navbar() {
   const [megaMenuOpen, setMegaMenuOpen] = useState(false);
   const [convertMenuOpen, setConvertMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     // Check sessionStorage first for fast UI render
@@ -21,22 +19,18 @@ export default function Navbar() {
       if (storedEmail) setUserEmail(storedEmail);
     }
 
-    // Always query /api/auth/me to verify real session cookies (handles OAuth & session persistence across refreshes)
+    // Query /api/auth/me to verify real session cookies
     fetch('/api/auth/me', { credentials: 'include' })
       .then((res) => res.json())
       .then((data) => {
         if (data.success && data.user) {
           setUserEmail(data.user.email);
-          setUserName(data.user.name);
-          setUserRole(data.user.role);
           if (typeof window !== 'undefined') {
             sessionStorage.setItem('pdfmaster_auth_email', data.user.email);
           }
         }
       })
-      .catch(() => {
-        // Unauthenticated or network error
-      });
+      .catch(() => {});
   }, []);
 
   const handleLogout = async () => {
@@ -46,8 +40,6 @@ export default function Navbar() {
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('pdfmaster_auth_email');
       setUserEmail(null);
-      setUserName(null);
-      setUserRole(null);
       window.location.href = '/auth/login';
     }
   };
@@ -158,15 +150,6 @@ export default function Navbar() {
                   <User className="w-3.5 h-3.5 text-amber-500" /> Profile
                 </Link>
 
-                {userRole === 'ADMIN' && (
-                  <Link
-                    href="/admin"
-                    className="px-3.5 py-2 rounded-2xl bg-indigo-950 text-indigo-300 text-xs font-bold flex items-center gap-1.5 hover:bg-indigo-900 transition-all border border-indigo-800"
-                  >
-                    <Shield className="w-3.5 h-3.5 text-indigo-400" /> Admin
-                  </Link>
-                )}
-
                 <Link
                   href="/dashboard/settings"
                   className="p-2 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-amber-500 transition-all"
@@ -231,9 +214,6 @@ export default function Navbar() {
               <Link href="/dashboard/files" className="block py-2 text-sm font-bold text-amber-500">My Files</Link>
               <Link href="/dashboard/profile" className="block py-2 text-sm font-semibold">Profile</Link>
               <Link href="/dashboard/settings" className="block py-2 text-sm font-semibold">Settings</Link>
-              {userRole === 'ADMIN' && (
-                <Link href="/admin" className="block py-2 text-sm font-bold text-indigo-400">Admin Portal</Link>
-              )}
             </>
           )}
 
