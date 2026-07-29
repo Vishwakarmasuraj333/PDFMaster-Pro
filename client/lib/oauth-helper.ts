@@ -22,10 +22,9 @@ export function getBaseUrl(request: Request): string {
       return formatted;
     }
 
-    // 3. Fall back to Request URL origin
-    const url = new URL(request.url);
-    return url.origin;
+    // 3. Fall back to official production Vercel domain
+    return 'https://pdf-master-pro-chi.vercel.app';
   } catch (err) {
-    return 'http://localhost:3000';
+    return 'https://pdf-master-pro-chi.vercel.app';
   }
 }
