@@ -17,11 +17,11 @@ export async function GET(request: Request) {
     );
   }
 
-  // Include prompt=consent and allow_signup=true to force GitHub credential authorization screen
+  // Set production scope: user:email read:user and force credential prompt
   const githubAuthUrl = `https://github.com/login/oauth/authorize?` +
     `client_id=${encodeURIComponent(githubClientId)}` +
     `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-    `&scope=${encodeURIComponent('user:email')}` +
+    `&scope=${encodeURIComponent('user:email read:user')}` +
     `&prompt=consent` +
     `&allow_signup=true`;
 
