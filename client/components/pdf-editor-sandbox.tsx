@@ -12,7 +12,7 @@ import {
   pageNumbersPDFClient, protectPDFClient, splitPDFClient, compressPDFClient,
   signPDFClient, docToPDFClient, downloadPDFBytes, downloadBlobFile,
   removePagesClient, cropPDFClient, redactPDFClient, repairPDFClient,
-  unlockPDFClient, aiSummarizePDFClient, aiTranslatePDFClient
+  unlockPDFClient, aiSummarizePDFClient, aiTranslatePDFClient, pdfToJpgClient
 } from '../lib/pdf-engine';
 
 interface PDFEditorSandboxProps {
@@ -27,6 +27,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
   const [processedBytes, setProcessedBytes] = useState<Uint8Array | null>(null);
   const [aiResultText, setAiResultText] = useState<string | null>(null);
   const [exportedContent, setExportedContent] = useState<{ content: string; name: string; type: string } | null>(null);
+  const [exportedImages, setExportedImages] = useState<string[] | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
@@ -75,6 +76,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
       setProcessedBytes(null);
       setAiResultText(null);
       setExportedContent(null);
+      setExportedImages(null);
       setErrorMessage(null);
     }
   };
@@ -87,6 +89,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
       setProcessedBytes(null);
       setAiResultText(null);
       setExportedContent(null);
+      setExportedImages(null);
       setErrorMessage(null);
     }
   };
@@ -97,6 +100,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
       setProcessedBytes(null);
       setAiResultText(null);
       setExportedContent(null);
+      setExportedImages(null);
       setErrorMessage(null);
     }
   };
@@ -124,6 +128,9 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
 
       if (toolSlug === 'jpg-to-pdf' || isImageUpload) {
         resultBytes = await imageToPDFClient(files);
+      } else if (toolSlug === 'pdf-to-jpg' || toolSlug === 'pdf-to-image') {
+        const { images } = await pdfToJpgClient(firstFile);
+        setExportedImages(images);
       } else if (toolSlug === 'merge-pdf') {
         resultBytes = await mergePDFsClient(files);
       } else if (toolSlug === 'split-pdf') {
@@ -158,7 +165,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
       } else if (toolSlug === 'protect-pdf') {
         resultBytes = await protectPDFClient(firstFile, passwordText);
       } else if (toolSlug === 'unlock-pdf') {
-        resultBytes = await unlockPDFClient(firstFile);
+        resultBytes = await unlockPDFClient(firstFile, passwordText);
       } else if (toolSlug.endsWith('-to-pdf')) {
         resultBytes = await docToPDFClient(firstFile, toolTitle);
       } else if (toolSlug === 'pdf-to-word') {
@@ -251,7 +258,16 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
   };
 
   const handleDownload = () => {
-    if (exportedContent) {
+    if (exportedImages && exportedImages.length > 0) {
+      exportedImages.forEach((img, idx) => {
+        const link = document.createElement('a');
+        link.href = img;
+        link.download = `${files[0].name.replace(/\.[^/.]+$/, "")}_Page${idx + 1}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      });
+    } else if (exportedContent) {
       downloadBlobFile(exportedContent.content, exportedContent.name, exportedContent.type);
     } else if (processedBytes) {
       downloadPDFBytes(processedBytes, `PDFMasterPro_${toolSlug}_Result.pdf`);
@@ -463,23 +479,25 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
             </div>
           )}
 
-          {toolSlug === 'protect-pdf' && (
+          {(toolSlug === 'protect-pdf' || toolSlug === 'unlock-pdf') && (
             <div className="p-6 rounded-3xl bg-amber-400/10 border border-amber-400/30 space-y-4">
               <div>
                 <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
-                  <Lock className="w-5 h-5 text-amber-500" /> Protect PDF
+                  <Lock className="w-5 h-5 text-amber-500" /> {toolSlug === 'protect-pdf' ? 'Protect PDF with Password' : 'Unlock Encrypted PDF'}
                 </h3>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">Set a password to protect your PDF file</p>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  {toolSlug === 'protect-pdf' ? 'Enter password to encrypt PDF with AES-256' : 'Enter PDF password to decrypt and remove encryption'}
+                </p>
               </div>
 
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Type password</label>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">PDF Password</label>
                   <div className="relative flex items-center">
                     <Lock className="w-4 h-4 text-slate-400 absolute left-3" />
                     <input
                       type={showPassword1 ? "text" : "password"}
-                      placeholder="Type password"
+                      placeholder="Enter password..."
                       value={passwordText}
                       onChange={(e) => setPasswordText(e.target.value)}
                       className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
@@ -545,13 +563,13 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
           {/* Action Buttons */}
           <div className="flex items-center justify-between pt-2">
             <button
-              onClick={() => { setFiles([]); setProcessedBytes(null); setAiResultText(null); setExportedContent(null); }}
+              onClick={() => { setFiles([]); setProcessedBytes(null); setAiResultText(null); setExportedContent(null); setExportedImages(null); }}
               className="text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer"
             >
               Clear All
             </button>
 
-            {!processedBytes && !exportedContent ? (
+            {!processedBytes && !exportedContent && !exportedImages ? (
               <button
                 onClick={handleProcess}
                 disabled={isProcessing}
