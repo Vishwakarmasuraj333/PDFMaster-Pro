@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { signAccessToken, signRefreshToken, setAuthCookies } from '@/lib/jwt-service';
+import { getBaseUrl } from '@/lib/oauth-helper';
 
 export async function GET(request: Request) {
   const githubClientId = process.env.GITHUB_CLIENT_ID;
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  const baseUrl = getBaseUrl(request);
   const redirectUri = `${baseUrl}/api/auth/github/callback`;
+
+  console.log(`[GITHUB OAUTH GET] Request URL Origin: ${baseUrl} | redirect_uri: ${redirectUri}`);
 
   if (!githubClientId) {
     return NextResponse.json(
@@ -29,8 +32,10 @@ export async function POST(request: Request) {
 
     const githubClientId = process.env.GITHUB_CLIENT_ID;
     const githubClientSecret = process.env.GITHUB_CLIENT_SECRET;
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const baseUrl = getBaseUrl(request);
     const redirectUri = `${baseUrl}/api/auth/github/callback`;
+
+    console.log(`[GITHUB OAUTH POST] Request URL Origin: ${baseUrl} | redirect_uri: ${redirectUri}`);
 
     let githubAccessToken = clientAccessToken;
 

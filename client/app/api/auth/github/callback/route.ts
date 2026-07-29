@@ -1,16 +1,16 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { signAccessToken, signRefreshToken, setAuthCookies } from '@/lib/jwt-service';
+import { getBaseUrl } from '@/lib/oauth-helper';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
+  const baseUrl = getBaseUrl(request);
   try {
     const { searchParams } = new URL(request.url);
     const code = searchParams.get('code');
     const error = searchParams.get('error');
-
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
 
     if (error || !code) {
       console.error('[GITHUB CALLBACK ERROR]', error || 'No authorization code provided');
@@ -20,6 +20,8 @@ export async function GET(request: Request) {
     const githubClientId = process.env.GITHUB_CLIENT_ID;
     const githubClientSecret = process.env.GITHUB_CLIENT_SECRET;
     const redirectUri = `${baseUrl}/api/auth/github/callback`;
+
+    console.log(`[GITHUB CALLBACK GET] Exchanging code with redirect_uri: ${redirectUri}`);
 
     // 1. Exchange Authorization Code for Access Token
     const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
@@ -113,7 +115,6 @@ export async function GET(request: Request) {
     return response;
   } catch (err: any) {
     console.error('[GITHUB CALLBACK EXCEPTION]', err.message);
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
     return NextResponse.redirect(`${baseUrl}/auth/login?error=server_error`);
   }
 }

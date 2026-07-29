@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { signAccessToken, signRefreshToken, setAuthCookies } from '@/lib/jwt-service';
+import { getBaseUrl } from '@/lib/oauth-helper';
 
 export async function GET(request: Request) {
   const googleClientId = process.env.GOOGLE_CLIENT_ID;
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  const baseUrl = getBaseUrl(request);
   const redirectUri = `${baseUrl}/api/auth/google/callback`;
+
+  console.log(`[GOOGLE OAUTH GET] Request URL Origin: ${baseUrl} | redirect_uri: ${redirectUri}`);
 
   if (!googleClientId) {
     return NextResponse.json(
@@ -32,8 +35,10 @@ export async function POST(request: Request) {
 
     const googleClientId = process.env.GOOGLE_CLIENT_ID;
     const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const baseUrl = getBaseUrl(request);
     const redirectUri = `${baseUrl}/api/auth/google/callback`;
+
+    console.log(`[GOOGLE OAUTH POST] Request URL Origin: ${baseUrl} | redirect_uri: ${redirectUri}`);
 
     let userEmail: string = '';
     let userName: string = '';

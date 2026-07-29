@@ -1,16 +1,16 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { signAccessToken, signRefreshToken, setAuthCookies } from '@/lib/jwt-service';
+import { getBaseUrl } from '@/lib/oauth-helper';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
+  const baseUrl = getBaseUrl(request);
   try {
     const { searchParams } = new URL(request.url);
     const code = searchParams.get('code');
     const error = searchParams.get('error');
-
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
 
     if (error || !code) {
       console.error('[GOOGLE CALLBACK ERROR]', error || 'No authorization code provided');
@@ -20,6 +20,8 @@ export async function GET(request: Request) {
     const googleClientId = process.env.GOOGLE_CLIENT_ID;
     const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
     const redirectUri = `${baseUrl}/api/auth/google/callback`;
+
+    console.log(`[GOOGLE CALLBACK GET] Exchanging code with redirect_uri: ${redirectUri}`);
 
     // 1. Exchange Authorization Code for Google OAuth Tokens
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
@@ -85,7 +87,6 @@ export async function GET(request: Request) {
     return response;
   } catch (err: any) {
     console.error('[GOOGLE CALLBACK EXCEPTION]', err.message);
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
     return NextResponse.redirect(`${baseUrl}/auth/login?error=server_error`);
   }
 }
