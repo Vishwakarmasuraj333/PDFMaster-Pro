@@ -1,9 +1,48 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { signAccessToken, signRefreshToken, setAuthCookies } from '@/lib/jwt-service';
+import { signAccessToken, signRefreshToken } from '@/lib/jwt-service';
 import { getBaseUrl } from '@/lib/oauth-helper';
 
 export const dynamic = 'force-dynamic';
+
+function buildCookieHeader(name: string, value: string, maxAge: number): string {
+  const parts = [
+    `${name}=${value}`,
+    `Path=/`,
+    `HttpOnly`,
+    `SameSite=Lax`,
+    `Max-Age=${maxAge}`,
+  ];
+  if (process.env.NODE_ENV === 'production') {
+    parts.push('Secure');
+  }
+  return parts.join('; ');
+}
+
+function createRedirectHtml(targetUrl: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="refresh" content="0;url=${targetUrl}">
+  <title>Authenticating...</title>
+  <style>
+    body{margin:0;display:flex;align-items:center;justify-content:center;height:100vh;background:#0f172a;color:#f8fafc;font-family:system-ui,sans-serif}
+    .c{text-align:center}
+    .spinner{width:40px;height:40px;border:4px solid #334155;border-top:4px solid #fbbf24;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    p{font-size:14px;color:#94a3b8}
+  </style>
+</head>
+<body>
+  <div class="c">
+    <div class="spinner"></div>
+    <p>Authentication successful. Redirecting...</p>
+  </div>
+  <script>window.location.href="${targetUrl}";</script>
+</body>
+</html>`;
+}
 
 export async function GET(request: Request) {
   const baseUrl = getBaseUrl(request);
@@ -77,14 +116,23 @@ export async function GET(request: Request) {
       },
     });
 
-    // 4. Issue JWT Session & Set HttpOnly Cookies
+    // 4. Issue JWT Session & Set HttpOnly Cookies via Set-Cookie headers on HTML response
     const jwtAccessToken = signAccessToken(user);
     const jwtRefreshToken = signRefreshToken(user);
 
-    const response = NextResponse.redirect(`${baseUrl}/tools`);
-    setAuthCookies(response, jwtAccessToken, jwtRefreshToken, user.email);
+    console.log(`[GOOGLE CALLBACK] Auth success for: ${user.email} -> Redirecting to /tools`);
 
-    return response;
+    const targetUrl = `${baseUrl}/tools`;
+    const html = createRedirectHtml(targetUrl);
+
+    const headers = new Headers();
+    headers.set('Content-Type', 'text/html; charset=utf-8');
+    headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    headers.append('Set-Cookie', buildCookieHeader('accessToken', jwtAccessToken, 86400));
+    headers.append('Set-Cookie', buildCookieHeader('refreshToken', jwtRefreshToken, 604800));
+    headers.append('Set-Cookie', buildCookieHeader('pdfmaster_session', user.email, 604800));
+
+    return new NextResponse(html, { status: 200, headers });
   } catch (err: any) {
     console.error('[GOOGLE CALLBACK EXCEPTION]', err.message);
     return NextResponse.redirect(`${baseUrl}/auth/login?error=server_error`);
