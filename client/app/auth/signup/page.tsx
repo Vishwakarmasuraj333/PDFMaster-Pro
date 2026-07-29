@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Sparkles, ArrowLeft, Mail, Lock, User, UserPlus } from 'lucide-react';
+import { Sparkles, ArrowLeft, Mail, Lock, User, UserPlus, Loader2 } from 'lucide-react';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -47,21 +47,27 @@ export default function SignupPage() {
         sessionStorage.setItem('pdfmaster_auth_email', email.trim());
       }
 
+      // Clear all inputs on success
+      setName('');
+      setEmail('');
+      setPassword('');
+
       router.push('/auth/verify-otp?method=registration');
     } catch (err: any) {
       setErrorMessage(err.message || 'Failed to create account.');
+      setPassword('');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0F172A] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#F8F9FA] dark:bg-[#12161A] flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-purple-600 dark:hover:text-purple-400"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-amber-500 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" /> Return to Home
         </Link>
@@ -69,8 +75,8 @@ export default function SignupPage() {
         <div className="glass-card rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-6">
           
           <div className="text-center space-y-2">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-purple-400 text-white mx-auto flex items-center justify-center shadow-lg shadow-purple-500/20">
-              <Sparkles className="w-6 h-6" />
+            <div className="w-12 h-12 rounded-2xl bg-amber-400 text-slate-900 mx-auto flex items-center justify-center shadow-lg shadow-amber-400/20">
+              <Sparkles className="w-6 h-6 fill-slate-900" />
             </div>
             <h2 className="text-2xl font-black text-slate-900 dark:text-white pt-2">Create Account</h2>
             <p className="text-xs text-slate-500">Join PDFMaster Pro for free and start processing documents</p>
@@ -93,7 +99,8 @@ export default function SignupPage() {
                   placeholder="Suraj Vishwakarma"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
+                  disabled={loading}
+                  className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 disabled:opacity-50"
                 />
               </div>
             </div>
@@ -108,7 +115,8 @@ export default function SignupPage() {
                   placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
+                  disabled={loading}
+                  className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 disabled:opacity-50"
                 />
               </div>
             </div>
@@ -120,10 +128,11 @@ export default function SignupPage() {
                 <input
                   type="password"
                   required
-                  placeholder="Minimum 8 characters"
+                  placeholder="Minimum 6 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
+                  disabled={loading}
+                  className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 disabled:opacity-50"
                 />
               </div>
             </div>
@@ -131,15 +140,23 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs shadow-lg shadow-purple-500/25 transition-all flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-2xl bg-amber-400 hover:bg-amber-500 disabled:opacity-50 text-slate-900 font-extrabold text-xs shadow-lg shadow-amber-400/20 transition-all flex items-center justify-center gap-2"
             >
-              <UserPlus className="w-4 h-4" /> {loading ? 'Creating...' : 'Create Account'}
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Creating Account...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-4 h-4" /> Create Free Account
+                </>
+              )}
             </button>
           </form>
 
           <p className="text-center text-xs text-slate-500">
             Already have an account?{' '}
-            <Link href="/auth/login" className="font-bold text-purple-600 dark:text-purple-400 hover:underline">
+            <Link href="/auth/login" className="font-extrabold text-amber-600 dark:text-amber-400 hover:underline">
               Log in
             </Link>
           </p>

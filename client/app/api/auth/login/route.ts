@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import prisma from '@/lib/prisma';
-import { signAccessToken, signRefreshToken, setAuthCookies } from '@/lib/jwt-service';
+import { createAndSendOTP } from '@/lib/auth-store';
 
 export async function POST(request: Request) {
   try {
@@ -77,26 +77,22 @@ export async function POST(request: Request) {
 
     console.log(`[AUTH LOG] Password Verified: ${lowerEmail}`);
 
-    // 3. Password Verified -> Create JWT & Set HttpOnly Secure Cookies Immediately
-    const accessToken = signAccessToken(user);
-    const refreshToken = signRefreshToken(user);
+    // 3. Password Verified -> Generate Cryptographic 6-Digit OTP & Send via Gmail SMTP
+    try {
+      await createAndSendOTP(lowerEmail);
+      console.log(`[AUTH LOG] Real OTP Sent via SMTP to: ${lowerEmail}`);
+    } catch (smtpErr: any) {
+      console.error('[AUTH LOG] SMTP Dispatch Notice:', smtpErr.message);
+      // Fallback: If SMTP is offline in environment, continue with OTP requirement for database OTP
+    }
 
-    const response = NextResponse.json({
+    return NextResponse.json({
       success: true,
-      message: 'Authentication successful. Welcome to PDFMaster Pro!',
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-      accessToken,
-      refreshToken,
+      requireOTP: true,
+      message: 'Password verified. 6-digit security OTP code sent to your email address.',
+      email: user.email,
     });
 
-    setAuthCookies(response, accessToken, refreshToken, user.email);
-
-    return response;
   } catch (err: any) {
     console.error('[AUTH ERROR] Login Route Error:', err.message);
     return NextResponse.json(

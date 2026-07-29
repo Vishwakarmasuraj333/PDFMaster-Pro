@@ -3,7 +3,7 @@
 import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Sparkles, ArrowLeft, Mail, Lock, LogIn, KeyRound, Loader2, AlertCircle } from 'lucide-react';
+import { Sparkles, ArrowLeft, Mail, Lock, LogIn, Loader2, AlertCircle } from 'lucide-react';
 
 function LoginContent() {
   const router = useRouter();
@@ -23,20 +23,19 @@ function LoginContent() {
 
     if (!email || !password) {
       setErrorMessage('Please enter both your email address and password.');
-      setPassword(''); // Clear password input on attempt
+      setPassword('');
       setLoading(false);
       return;
     }
 
     if (password.length < 6) {
       setErrorMessage('Invalid password. Password must be at least 6 characters long.');
-      setPassword(''); // Clear password input on attempt
+      setPassword('');
       setLoading(false);
       return;
     }
 
     try {
-      // Call native Vercel serverless Route Handler directly
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -45,28 +44,28 @@ function LoginContent() {
 
       const data = await res.json().catch(() => ({}));
 
-      // Clear password input immediately after attempt (success or failure)
+      // Always clear password input immediately after attempt (success or failure)
       setPassword('');
 
-      // STRICT BACKEND VERIFICATION - If credentials are bad (401/403/500), show error & STOP
       if (!res.ok || !data.success) {
         throw new Error(data.message || 'Invalid email or password.');
       }
 
-      // Save email for session context
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('pdfmaster_auth_email', email.trim());
       }
 
-      console.log('[AUTH LOG] Redirected to /tools');
-
-      // SUCCESSFUL AUTHENTICATION -> Redirect directly to /tools (or requested redirect target)
-      const targetUrl = redirectTarget || '/tools';
-      window.location.href = targetUrl;
+      if (data.requireOTP) {
+        console.log('[AUTH LOG] Password verified -> Redirecting to /auth/verify-otp');
+        router.push(`/auth/verify-otp?method=email${redirectTarget ? `&redirect=${encodeURIComponent(redirectTarget)}` : ''}`);
+      } else {
+        console.log('[AUTH LOG] Redirecting to /tools');
+        window.location.href = redirectTarget || '/tools';
+      }
 
     } catch (err: any) {
       setErrorMessage(err.message || 'Invalid email or password.');
-      setPassword(''); // Ensure password is cleared on error
+      setPassword('');
     } finally {
       setLoading(false);
     }
