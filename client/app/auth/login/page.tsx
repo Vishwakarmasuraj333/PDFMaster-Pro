@@ -63,39 +63,13 @@ function LoginContent() {
     }
   };
 
-  const handleSocialLogin = async (provider: 'Google' | 'GitHub') => {
+  const handleSocialLogin = (provider: 'Google' | 'GitHub') => {
     setLoading(true);
     setErrorMessage(null);
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-      const endpoint = provider === 'Google' ? '/auth/google' : '/auth/github';
-      const res = await fetch(`${apiUrl}${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: `${provider.toLowerCase()}user@pdfmasterpro.com`,
-          name: `${provider} Authenticated User`,
-        }),
-      });
-
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || `${provider} authentication failed.`);
-      }
-
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('pdfmaster_auth_email', data.user.email);
-      }
-
-      if (redirectTarget) {
-        router.push(redirectTarget);
-      } else {
-        router.push('/tools');
-      }
-    } catch (err: any) {
-      setErrorMessage(err.message || `${provider} login failed.`);
-    } finally {
-      setLoading(false);
+    if (provider === 'Google') {
+      window.location.href = '/api/auth/google';
+    } else {
+      window.location.href = '/api/auth/github';
     }
   };
 

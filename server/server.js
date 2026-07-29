@@ -3,6 +3,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const { securityHeaders, apiLimiter } = require('./middlewares/security');
 const errorHandler = require('./middlewares/errorHandler');
+const { verifySMTP } = require('./services/mailService');
 
 dotenv.config();
 
@@ -41,10 +42,16 @@ app.use('/api/payment', require('./routes/paymentRoutes'));
 // Global Error Handler
 app.use(errorHandler);
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`===================================================`);
   console.log(`  🚀 PDFMaster Pro API Server running on port ${PORT}`);
   console.log(`  👨‍💻 Developed by Suraj Vishwakarma`);
   console.log(`  © 2026 PDFMaster Pro. All rights reserved.`);
   console.log(`===================================================`);
+
+  try {
+    await verifySMTP();
+  } catch (err) {
+    console.error('[SMTP STARTUP ERROR]', err.message);
+  }
 });

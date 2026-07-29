@@ -1,155 +1,140 @@
+import prisma from './prisma';
 import bcrypt from 'bcryptjs';
-import nodemailer from 'nodemailer';
-
-export interface UserRecord {
-  id: string;
-  name: string;
-  email: string;
-  passwordHash: string;
-  role: 'USER' | 'ADMIN';
-  isVerified: boolean;
-  createdAt: Date;
-}
-
-export interface OTPRecord {
-  otpHash: string;
-  expiresAt: number;
-  attempts: number;
-}
-
-// In-Memory database singleton for Vercel production serverless execution
-const globalAuthStore = globalThis as unknown as {
-  pdfmasterUserStore?: Map<string, UserRecord>;
-  pdfmasterOtpStore?: Map<string, OTPRecord>;
-};
-
-if (!globalAuthStore.pdfmasterUserStore) {
-  globalAuthStore.pdfmasterUserStore = new Map<string, UserRecord>();
-}
-
-if (!globalAuthStore.pdfmasterOtpStore) {
-  globalAuthStore.pdfmasterOtpStore = new Map<string, OTPRecord>();
-}
-
-export const userStore = globalAuthStore.pdfmasterUserStore;
-export const otpStore = globalAuthStore.pdfmasterOtpStore;
-
-// Initialize default production accounts (Suraj Vishwakarma Super Admin & Test User)
-(async () => {
-  if (!userStore.has('suraj@pdfmasterpro.com')) {
-    const adminHash = await bcrypt.hash('SurajAdmin2026!', 10);
-    userStore.set('suraj@pdfmasterpro.com', {
-      id: 'admin_suraj_01',
-      name: 'Suraj Vishwakarma',
-      email: 'suraj@pdfmasterpro.com',
-      passwordHash: adminHash,
-      role: 'ADMIN',
-      isVerified: true,
-      createdAt: new Date(),
-    });
-  }
-
-  if (!userStore.has('itxsurajofficial@gmail.com')) {
-    const userHash = await bcrypt.hash('Password123!', 10);
-    userStore.set('itxsurajofficial@gmail.com', {
-      id: 'user_suraj_02',
-      name: 'Suraj Vishwakarma',
-      email: 'itxsurajofficial@gmail.com',
-      passwordHash: userHash,
-      role: 'ADMIN',
-      isVerified: true,
-      createdAt: new Date(),
-    });
-  }
-
-  if (!userStore.has('itsurya9930@gmail.com')) {
-    const userHash = await bcrypt.hash('bittu8097944', 10);
-    userStore.set('itsurya9930@gmail.com', {
-      id: 'user_surya_03',
-      name: 'Surya Vishwakarma',
-      email: 'itsurya9930@gmail.com',
-      passwordHash: userHash,
-      role: 'ADMIN',
-      isVerified: true,
-      createdAt: new Date(),
-    });
-  }
-})();
+import crypto from 'crypto';
+import { sendOTPEmail } from './mail-service';
 
 /**
- * Create Gmail SMTP Transport
+ * Generate cryptographically secure 6-digit random OTP
  */
-function createSMTPTransporter() {
-  const gmailUser = process.env.GMAIL_USER || 'itxsurajofficial@gmail.com';
-  const gmailPass = process.env.GMAIL_APP_PASSWORD || '';
+export function generate6DigitOTP(): string {
+  return crypto.randomInt(100000, 1000000).toString();
+}
 
-  if (!gmailPass) {
-    console.warn('[SMTP Warning] GMAIL_APP_PASSWORD not configured. Logging OTP code locally.');
-  }
+/**
+ * Database-backed User lookup
+ */
+export async function findUserByEmail(email: string) {
+  const lowerEmail = email.toLowerCase().trim();
+  return await prisma.user.findUnique({
+    where: { email: lowerEmail },
+  });
+}
 
-  return nodemailer.createTransport({
-    service: 'gmail',
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // TLS
-    auth: {
-      user: gmailUser,
-      pass: gmailPass,
+/**
+ * Database-backed User creation / update
+ */
+export async function upsertUser(data: {
+  email: string;
+  name: string;
+  passwordHash?: string;
+  role?: 'USER' | 'ADMIN' | 'STAFF';
+  provider?: string;
+  providerId?: string;
+  avatar?: string;
+  isVerified?: boolean;
+}) {
+  const lowerEmail = data.email.toLowerCase().trim();
+  const isDefaultAdmin = lowerEmail.includes('suraj') || lowerEmail.includes('admin') || lowerEmail === 'itsurya9930@gmail.com' || lowerEmail === 'itxsurajofficial@gmail.com';
+  const role = data.role || (isDefaultAdmin ? 'ADMIN' : 'USER');
+
+  return await prisma.user.upsert({
+    where: { email: lowerEmail },
+    update: {
+      name: data.name,
+      avatar: data.avatar || undefined,
+      provider: data.provider || undefined,
+      providerId: data.providerId || undefined,
+      isVerified: data.isVerified !== undefined ? data.isVerified : undefined,
+    },
+    create: {
+      email: lowerEmail,
+      name: data.name,
+      passwordHash: data.passwordHash || null,
+      role: role,
+      provider: data.provider || 'credentials',
+      providerId: data.providerId || null,
+      avatar: data.avatar || null,
+      isVerified: data.isVerified || false,
     },
   });
 }
 
 /**
- * Generate 6-Digit Random OTP
+ * Database-backed OTP generation and SMTP email dispatch
+ * Resends invalidate previous OTP records.
  */
-export function generate6DigitOTP(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+export async function createAndSendOTP(email: string): Promise<string> {
+  const lowerEmail = email.toLowerCase().trim();
+  const otpCode = generate6DigitOTP();
+  const otpHash = await bcrypt.hash(otpCode, 10);
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // Exactly 5 minutes
+
+  // Store in MySQL database using Prisma (upsert or delete previous & create)
+  await prisma.loginOTP.upsert({
+    where: { email: lowerEmail },
+    update: {
+      otpHash,
+      expiresAt,
+      attempts: 0,
+      consumedAt: null,
+      createdAt: new Date(),
+    },
+    create: {
+      email: lowerEmail,
+      otpHash,
+      expiresAt,
+      attempts: 0,
+      consumedAt: null,
+    },
+  });
+
+  // Dispatch via Gmail SMTP (throws real error if SMTP fails)
+  await sendOTPEmail(lowerEmail, otpCode);
+
+  return otpCode;
 }
 
 /**
- * Send OTP Email via Nodemailer Gmail SMTP
+ * Database-backed OTP verification
  */
-export async function sendOTPEmail(email: string, otpCode: string): Promise<boolean> {
-  const transporter = createSMTPTransporter();
+export async function verifyDatabaseOTP(email: string, otpInput: string): Promise<{ success: boolean; message: string }> {
+  const lowerEmail = email.toLowerCase().trim();
 
-  const htmlContent = `
-    <div style="font-family: Arial, sans-serif; background-color: #f8f9fa; padding: 30px; border-radius: 16px; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0;">
-      <div style="text-align: center; margin-bottom: 20px;">
-        <h1 style="color: #1e293b; margin: 0; font-size: 24px;">PDFMaster Pro</h1>
-        <p style="color: #f4c430; font-weight: bold; margin-top: 4px; font-size: 14px;">ENTERPRISE SAAS SECURITY</p>
-      </div>
-      <div style="background-color: #ffffff; padding: 24px; border-radius: 12px; border: 1px solid #cbd5e1; text-align: center;">
-        <h2 style="color: #0f172a; font-size: 18px; margin-top: 0;">Verification Code</h2>
-        <p style="color: #475569; font-size: 14px;">Your secure 6-digit OTP for account authentication is:</p>
-        <div style="background-color: #fffbebf5; border: 2px dashed #f4c430; font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #b45309; padding: 14px 20px; border-radius: 8px; display: inline-block; margin: 16px 0;">
-          ${otpCode}
-        </div>
-        <p style="color: #64748b; font-size: 12px; margin-bottom: 0;">
-          ⏱️ Valid for <strong>5 minutes</strong>. Do not share this code with anyone.
-        </p>
-      </div>
-      <div style="text-align: center; margin-top: 20px; color: #94a3b8; font-size: 11px;">
-        © 2026 PDFMaster Pro by Suraj Vishwakarma. All rights reserved.
-      </div>
-    </div>
-  `;
+  const record = await prisma.loginOTP.findUnique({
+    where: { email: lowerEmail },
+  });
 
-  try {
-    const gmailUser = process.env.GMAIL_USER || 'itxsurajofficial@gmail.com';
-    if (process.env.GMAIL_APP_PASSWORD) {
-      await transporter.sendMail({
-        from: `"PDFMaster Pro Security" <${gmailUser}>`,
-        to: email,
-        subject: `${otpCode} is your PDFMaster Pro Verification Code`,
-        html: htmlContent,
-      });
-      console.log(`[SMTP Success] Sent OTP (${otpCode}) to ${email}`);
-    } else {
-      console.log(`[Mock SMTP] Verification OTP (${otpCode}) generated for ${email}`);
-    }
-    return true;
-  } catch (err: any) {
-    console.error(`[SMTP Error] Failed to send email to ${email}:`, err.message);
-    return false;
+  if (!record || record.consumedAt) {
+    return { success: false, message: 'OTP expired or not found. Please request a new code.' };
   }
+
+  // Check 5-minute expiry
+  if (new Date() > record.expiresAt) {
+    await prisma.loginOTP.delete({ where: { email: lowerEmail } }).catch(() => {});
+    return { success: false, message: 'OTP code expired (5 minute limit).' };
+  }
+
+  // Check maximum 5 attempts limit
+  if (record.attempts >= 5) {
+    await prisma.loginOTP.delete({ where: { email: lowerEmail } }).catch(() => {});
+    return { success: false, message: 'Maximum 5 invalid attempts reached. Please request a new OTP.' };
+  }
+
+  // Verify bcrypt hashed OTP
+  const isValid = await bcrypt.compare(otpInput, record.otpHash);
+  if (!isValid) {
+    const updatedAttempts = record.attempts + 1;
+    await prisma.loginOTP.update({
+      where: { email: lowerEmail },
+      data: { attempts: updatedAttempts },
+    });
+    return { success: false, message: `Invalid OTP code. Attempts remaining: ${5 - updatedAttempts}` };
+  }
+
+  // Delete consumed OTP from database immediately to prevent reuse
+  await prisma.loginOTP.delete({
+    where: { email: lowerEmail },
+  }).catch(() => {});
+
+  return { success: true, message: 'OTP verified successfully.' };
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { userStore, otpStore, generate6DigitOTP, sendOTPEmail } from '@/lib/auth-store';
+import prisma from '@/lib/prisma';
+import { createAndSendOTP } from '@/lib/auth-store';
 
 export async function POST(request: Request) {
   try {
@@ -8,7 +9,7 @@ export async function POST(request: Request) {
 
     if (!name || !email || !password) {
       return NextResponse.json(
-        { success: false, message: 'Full name, email, and password are required.' },
+        { success: false, message: 'Full name, email address, and password are required.' },
         { status: 400 }
       );
     }
@@ -22,7 +23,12 @@ export async function POST(request: Request) {
 
     const lowerEmail = email.toLowerCase().trim();
 
-    if (userStore.has(lowerEmail)) {
+    // Check if account exists
+    const existing = await prisma.user.findUnique({
+      where: { email: lowerEmail },
+    });
+
+    if (existing) {
       return NextResponse.json(
         { success: false, message: 'An account with this email address already exists.' },
         { status: 409 }
@@ -30,36 +36,34 @@ export async function POST(request: Request) {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = {
-      id: Date.now().toString(),
-      name: name.trim(),
-      email: lowerEmail,
-      passwordHash,
-      role: (lowerEmail.includes('suraj') || lowerEmail.includes('admin') ? 'ADMIN' : 'USER') as 'ADMIN' | 'USER',
-      isVerified: false,
-      createdAt: new Date(),
-    };
+    const isOwner = lowerEmail.includes('suraj') || lowerEmail.includes('admin') || lowerEmail === 'itsurya9930@gmail.com' || lowerEmail === 'itxsurajofficial@gmail.com';
 
-    userStore.set(lowerEmail, user);
-
-    // Generate real 6-digit OTP code upon registration
-    const otpCode = generate6DigitOTP();
-    const otpHash = await bcrypt.hash(otpCode, 10);
-
-    otpStore.set(lowerEmail, {
-      otpHash,
-      expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
-      attempts: 0,
+    const user = await prisma.user.create({
+      data: {
+        email: lowerEmail,
+        name: name.trim(),
+        passwordHash,
+        role: isOwner ? 'ADMIN' : 'USER',
+        isVerified: false,
+        provider: 'credentials',
+      },
     });
 
-    await sendOTPEmail(lowerEmail, otpCode);
+    // Send OTP via Gmail SMTP
+    try {
+      await createAndSendOTP(lowerEmail);
+    } catch (smtpError: any) {
+      return NextResponse.json(
+        { success: false, message: `Account created, but failed to send OTP email: ${smtpError.message}` },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(
       {
         success: true,
-        message: 'Account created. 6-digit OTP code sent to your email.',
-        email: lowerEmail,
-        otpCode,
+        message: 'Account created successfully. 6-digit OTP code sent to your email address.',
+        email: user.email,
       },
       { status: 201 }
     );

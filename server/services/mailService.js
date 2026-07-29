@@ -1,17 +1,35 @@
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_PORT === '465',
-  auth: {
-    user: process.env.SMTP_USER || '',
-    pass: process.env.SMTP_PASS || '',
-  },
-});
+function createTransporter() {
+  const user = process.env.GMAIL_USER || process.env.SMTP_USER || '';
+  const pass = process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS || '';
+
+  return nodemailer.createTransport({
+    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // TLS
+    auth: { user, pass },
+  });
+}
 
 /**
- * Generate Responsive Purple Gradient HTML Email Template
+ * Startup SMTP Connection Verification
+ */
+async function verifySMTP() {
+  const transporter = createTransporter();
+  try {
+    const verified = await transporter.verify();
+    console.log('[SMTP STARTUP VERIFICATION] Connection verified with Gmail SMTP server:', verified);
+    return true;
+  } catch (err) {
+    console.error('[SMTP STARTUP VERIFICATION ERROR] Failed to connect to Gmail SMTP:', err.message);
+    throw new Error(`Gmail SMTP Startup Verification Failed: ${err.message}`);
+  }
+}
+
+/**
+ * Generate Purple Gradient HTML Email Template for OTP
  */
 function getOTPEmailHTML(otpCode, userEmail) {
   return `
@@ -53,7 +71,7 @@ function getOTPEmailHTML(otpCode, userEmail) {
 
       <div class="footer">
         © 2026 PDFMaster Pro. All rights reserved.<br>
-        Developed with ❤️ by <strong>Suraj Vishwakarma</strong>
+        Developed by <strong>Suraj Vishwakarma</strong>
       </div>
     </div>
   </body>
@@ -62,29 +80,37 @@ function getOTPEmailHTML(otpCode, userEmail) {
 }
 
 /**
- * Send Login Verification OTP Mail
+ * Send Login Verification OTP Mail via Gmail SMTP
+ * Throws real Error if delivery fails
  */
 async function sendOTPEmail(toEmail, otpCode) {
+  const user = process.env.GMAIL_USER || process.env.SMTP_USER || '';
+  const pass = process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS || '';
+
+  if (!user || !pass) {
+    throw new Error('Gmail SMTP credentials are not configured on the server.');
+  }
+
+  const transporter = createTransporter();
   const mailOptions = {
-    from: process.env.SMTP_FROM || '"PDFMaster Pro" <noreply@pdfmasterpro.com>',
+    from: `"PDFMaster Pro Security" <${user}>`,
     to: toEmail,
-    subject: 'Your Login Verification Code - PDFMaster Pro',
+    subject: `${otpCode} is your PDFMaster Pro Verification Code`,
     html: getOTPEmailHTML(otpCode, toEmail),
   };
 
-  try {
-    if (process.env.SMTP_USER) {
-      await transporter.sendMail(mailOptions);
-    }
-    console.log(`[SMTP Mailer] Verification OTP (${otpCode}) sent to ${toEmail}`);
-    return true;
-  } catch (err) {
-    console.error('[SMTP Mailer Error]', err);
-    return false;
+  const info = await transporter.sendMail(mailOptions);
+  console.log(`[SMTP Mailer Success] Verification OTP sent to ${toEmail}. Message ID: ${info.messageId}`);
+  
+  if (!info.accepted || info.accepted.length === 0) {
+    throw new Error(`Gmail SMTP rejected message delivery for email: ${toEmail}`);
   }
+
+  return true;
 }
 
 module.exports = {
+  verifySMTP,
   sendOTPEmail,
   getOTPEmailHTML,
 };

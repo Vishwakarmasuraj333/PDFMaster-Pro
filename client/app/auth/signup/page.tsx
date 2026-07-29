@@ -10,15 +10,49 @@ export default function SignupPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
+    setErrorMessage(null);
+
+    if (!name || !email || !password) {
+      setErrorMessage('Please fill in all required fields.');
       setLoading(false);
-      router.push('/dashboard');
-    }, 600);
+      return;
+    }
+
+    if (password.length < 6) {
+      setErrorMessage('Password must be at least 6 characters long.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), email: email.trim(), password }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Registration failed.');
+      }
+
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('pdfmaster_auth_email', email.trim());
+      }
+
+      router.push('/auth/verify-otp?method=registration');
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to create account.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -41,6 +75,12 @@ export default function SignupPage() {
             <h2 className="text-2xl font-black text-slate-900 dark:text-white pt-2">Create Account</h2>
             <p className="text-xs text-slate-500">Join PDFMaster Pro for free and start processing documents</p>
           </div>
+
+          {errorMessage && (
+            <div className="p-3.5 rounded-2xl bg-red-100 dark:bg-red-950/80 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 text-xs font-bold text-center">
+              ⚠️ {errorMessage}
+            </div>
+          )}
 
           <form onSubmit={handleSignup} className="space-y-4">
             <div className="space-y-1.5">
