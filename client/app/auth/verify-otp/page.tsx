@@ -1,27 +1,26 @@
 "use client";
 
-import React, { useState, useEffect, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { ShieldCheck, ArrowLeft, CheckCircle2, RotateCw, Sparkles, Loader2 } from 'lucide-react';
+import { ShieldCheck, ArrowLeft, CheckCircle2, RotateCw, Loader2, AlertCircle } from 'lucide-react';
 
-function VerifyOtpContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const method = searchParams.get('method') || 'Authentication';
-
+export default function VerifyOtpPage() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [countdown, setCountdown] = useState(300); // 5 minutes expiry
   const [verifiedSuccess, setVerifiedSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [redirectTarget, setRedirectTarget] = useState('');
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedEmail = sessionStorage.getItem('pdfmaster_auth_email');
       if (savedEmail) setEmail(savedEmail);
+
+      const params = new URLSearchParams(window.location.search);
+      setRedirectTarget(params.get('redirect') || '');
     }
 
     const timer = setInterval(() => {
@@ -69,7 +68,6 @@ function VerifyOtpContent() {
     }
 
     try {
-      // Call native Vercel serverless Route Handler
       const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -89,15 +87,11 @@ function VerifyOtpContent() {
       }
 
       setTimeout(() => {
-        const redirectTarget = searchParams.get('redirect');
-        if (redirectTarget) {
-          router.push(redirectTarget);
-        } else {
-          router.push('/tools'); // Return directly to PDF tools per spec
-        }
-      }, 600);
+        window.location.href = redirectTarget || '/tools';
+      }, 500);
     } catch (err: any) {
       setErrorMessage(err.message || 'Verification failed. Please try again.');
+      setOtp(['', '', '', '', '', '']);
     } finally {
       setLoading(false);
     }
@@ -108,14 +102,12 @@ function VerifyOtpContent() {
     setErrorMessage(null);
     setOtp(['', '', '', '', '', '']);
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/auth/resend-otp`, {
+      await fetch('/api/auth/resend-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
-    } catch (e) {
-      // Ignore background resend network log
-    }
+    } catch (e) {}
   };
 
   const minutes = Math.floor(countdown / 60);
@@ -132,7 +124,7 @@ function VerifyOtpContent() {
           <ArrowLeft className="w-4 h-4" /> Back to Login
         </Link>
 
-        <div className="glass-card rounded-3xl p-8 border border-slate-200 dark:border-slate-800 space-y-6 shadow-2xl">
+        <div className="glass-card rounded-3xl p-8 border border-slate-200 dark:border-slate-800 space-y-6 shadow-2xl bg-white dark:bg-slate-900">
           <div className="text-center space-y-2">
             <div className="w-14 h-14 rounded-2xl bg-amber-400/20 text-amber-500 mx-auto flex items-center justify-center shadow-lg border border-amber-400/30">
               <ShieldCheck className="w-7 h-7" />
@@ -147,13 +139,14 @@ function VerifyOtpContent() {
 
           {verifiedSuccess && (
             <div className="p-4 rounded-2xl bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-extrabold flex items-center justify-center gap-2 animate-bounce">
-              <CheckCircle2 className="w-5 h-5 text-emerald-500" /> OTP Verified! Loading PDF Tools...
+              <CheckCircle2 className="w-5 h-5 text-emerald-500" /> OTP Verified! Redirecting to PDF Tools...
             </div>
           )}
 
           {errorMessage && (
-            <div className="p-3.5 rounded-2xl bg-red-100 dark:bg-red-950/80 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 text-xs font-bold text-center">
-              ⚠️ {errorMessage}
+            <div className="p-4 rounded-2xl bg-red-100 dark:bg-red-950/80 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 text-xs font-bold flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+              <span>{errorMessage}</span>
             </div>
           )}
 
@@ -171,7 +164,8 @@ function VerifyOtpContent() {
                   onChange={(e) => handleChange(e.target.value, idx)}
                   onKeyDown={(e) => handleKeyDown(e, idx)}
                   onPaste={handlePaste}
-                  className="w-11 h-12 text-center text-lg font-black rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 shadow-inner"
+                  disabled={loading}
+                  className="w-11 h-12 text-center text-lg font-black rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 shadow-inner disabled:opacity-50"
                 />
               ))}
             </div>
@@ -179,11 +173,11 @@ function VerifyOtpContent() {
             <button
               type="submit"
               disabled={loading || otp.join('').length < 6}
-              className="w-full py-3.5 rounded-2xl bg-amber-400 hover:bg-amber-500 disabled:opacity-50 text-slate-900 font-extrabold text-xs shadow-xl shadow-amber-400/20 transition-all flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-2xl bg-amber-400 hover:bg-amber-500 disabled:opacity-50 text-slate-900 font-extrabold text-xs shadow-xl shadow-amber-400/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               {loading ? (
                 <>
-                  <RotateCw className="w-4 h-4 animate-spin" /> Verifying OTP Code...
+                  <Loader2 className="w-4 h-4 animate-spin" /> Verifying OTP Code...
                 </>
               ) : (
                 <>
@@ -200,8 +194,9 @@ function VerifyOtpContent() {
               </p>
             ) : (
               <button
+                type="button"
                 onClick={handleResendOtp}
-                className="text-xs font-extrabold text-amber-500 hover:underline flex items-center gap-1 mx-auto"
+                className="text-xs font-extrabold text-amber-500 hover:underline flex items-center gap-1 mx-auto cursor-pointer"
               >
                 <RotateCw className="w-3.5 h-3.5" /> Resend New OTP Code
               </button>
@@ -211,17 +206,5 @@ function VerifyOtpContent() {
 
       </div>
     </div>
-  );
-}
-
-export default function VerifyOtpPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-[#F8F9FA] dark:bg-[#12161A] flex items-center justify-center p-4">
-        <Loader2 className="w-8 h-8 animate-spin text-amber-400 mx-auto" />
-      </div>
-    }>
-      <VerifyOtpContent />
-    </Suspense>
   );
 }

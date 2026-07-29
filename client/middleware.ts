@@ -13,7 +13,11 @@ function decodeJwtPayload(token: string): any {
         .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
         .join('')
     );
-    return JSON.parse(jsonPayload);
+    const parsed = JSON.parse(jsonPayload);
+    if (parsed && parsed.exp && parsed.exp * 1000 < Date.now()) {
+      return null; // Expired token
+    }
+    return parsed;
   } catch (err) {
     return null;
   }
@@ -24,32 +28,28 @@ export function middleware(request: NextRequest) {
   const accessToken = request.cookies.get('accessToken')?.value;
   const sessionEmail = request.cookies.get('pdfmaster_session')?.value;
 
-  const isAuthenticated = !!(accessToken || sessionEmail);
-
+  let isValidToken = false;
   let userRole = 'USER';
   let userEmail = sessionEmail || '';
 
   if (accessToken) {
     const payload = decodeJwtPayload(accessToken);
     if (payload) {
+      isValidToken = true;
       if (payload.role) userRole = String(payload.role);
       if (payload.email) userEmail = String(payload.email);
     }
+  } else if (sessionEmail) {
+    isValidToken = true;
   }
 
   if (userEmail && (userEmail.includes('admin') || userEmail.includes('suraj') || userEmail === 'itsurya9930@gmail.com' || userEmail === 'itxsurajofficial@gmail.com')) {
     userRole = 'ADMIN';
   }
 
-  // 1. If user is already authenticated and visits /auth/login or /auth/signup, redirect to /tools
-  if (isAuthenticated && (path === '/auth/login' || path === '/auth/signup')) {
-    console.log(`[AUTH LOG] Authenticated user (${userEmail}) tried visiting ${path} -> Redirecting to /tools`);
-    return NextResponse.redirect(new URL('/tools', request.url));
-  }
-
-  // 2. Protect /admin routes (ADMIN role required, HTTP 403 for non-admins)
+  // 1. Protect /admin routes (ADMIN role required, HTTP 403 for non-admins)
   if (path.startsWith('/admin')) {
-    if (!isAuthenticated) {
+    if (!isValidToken) {
       console.log(`[AUTH LOG] Unauthenticated access to /admin -> Redirecting to /auth/login`);
       const url = new URL('/auth/login', request.url);
       url.searchParams.set('redirect', path);
@@ -80,9 +80,9 @@ export function middleware(request: NextRequest) {
     console.log(`[AUTH LOG] Middleware Authorized for Admin: ${userEmail}`);
   }
 
-  // 3. Protect /tools routes (Authentication required)
+  // 2. Protect /tools routes (Authentication required)
   if (path.startsWith('/tools')) {
-    if (!isAuthenticated) {
+    if (!isValidToken) {
       console.log(`[AUTH LOG] Unauthenticated access to /tools -> Redirecting to /auth/login`);
       const url = new URL('/auth/login', request.url);
       url.searchParams.set('redirect', path);
@@ -95,5 +95,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/tools/:path*', '/auth/login', '/auth/signup'],
+  matcher: ['/admin/:path*', '/tools/:path*'],
 };
