@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Sparkles, Heart } from 'lucide-react';
+import { Heart } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -10,13 +10,11 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 pb-12 border-b border-slate-800">
           
-          {/* Brand Info */}
+          {/* Brand Info with VS Logo */}
           <div className="md:col-span-1 space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-2xl bg-amber-400 p-0.5 shadow-lg shadow-amber-400/20">
-                <div className="w-full h-full bg-slate-900 rounded-[14px] flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-amber-400 fill-amber-400/20" />
-                </div>
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-amber-400 p-0.5 shadow-lg shadow-amber-400/20 overflow-hidden">
+                <img src="/vs-brand-logo.png" alt="VS Logo" className="w-full h-full object-cover rounded-[14px]" />
               </div>
               <span className="text-xl font-extrabold text-white tracking-tight">
                 PDFMaster<span className="text-amber-400 font-black">Pro</span>
@@ -36,7 +34,7 @@ export default function Footer() {
             <ul className="space-y-2 text-xs text-slate-400">
               <li><Link href="/tools/merge-pdf" className="hover:text-amber-400 transition-colors">Merge PDF</Link></li>
               <li><Link href="/tools/split-pdf" className="hover:text-amber-400 transition-colors">Split PDF</Link></li>
-              <li><Link href="/tools/compress-pdf" className="hover:text-purple-400 hover:text-amber-400 transition-colors">Compress PDF</Link></li>
+              <li><Link href="/tools/compress-pdf" className="hover:text-amber-400 transition-colors">Compress PDF</Link></li>
               <li><Link href="/tools/pdf-to-word" className="hover:text-amber-400 transition-colors">PDF to Word</Link></li>
               <li><Link href="/tools/ai-summarizer" className="hover:text-amber-400 transition-colors">AI PDF Summary</Link></li>
               <li><Link href="/tools" className="hover:text-amber-400 transition-colors font-extrabold text-amber-400">All 30+ Tools →</Link></li>

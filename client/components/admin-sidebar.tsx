@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   ShieldAlert, Users, Layers, Terminal, Sliders, 
-  ArrowLeft, Sparkles, Database, Key, Activity
+  ArrowLeft
 } from 'lucide-react';
 
 export default function AdminSidebar() {
@@ -23,10 +23,10 @@ export default function AdminSidebar() {
     <aside className="w-64 border-r border-slate-800 bg-[#12161A] text-slate-100 flex flex-col justify-between h-screen sticky top-0 p-5">
       <div className="space-y-6">
         
-        {/* Brand */}
+        {/* Brand with VS Logo */}
         <Link href="/admin" className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-amber-400 flex items-center justify-center text-slate-900 shadow-lg shadow-amber-400/20">
-            <Sparkles className="w-5 h-5 fill-slate-900" />
+          <div className="w-9 h-9 rounded-xl bg-amber-400 p-0.5 shadow-lg shadow-amber-400/20 overflow-hidden">
+            <img src="/vs-brand-logo.png" alt="VS Logo" className="w-full h-full object-cover rounded-[10px]" />
           </div>
           <div>
             <span className="font-black text-base text-white">
