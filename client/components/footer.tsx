@@ -6,27 +6,27 @@ import { Sparkles, Heart } from 'lucide-react';
 
 export default function Footer() {
   return (
-    <footer className="bg-slate-900 text-slate-300 border-t border-slate-800 pt-16 pb-12">
+    <footer className="bg-[#0F172A] text-slate-300 border-t border-slate-800 pt-16 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-10 pb-12 border-b border-slate-800">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-10 pb-12 border-b border-slate-800">
           
           {/* Brand Info */}
-          <div className="md:col-span-2 space-y-4">
+          <div className="md:col-span-1 space-y-4">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-purple-400 p-0.5">
-                <div className="w-full h-full bg-slate-900 rounded-[10px] flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-purple-400" />
+              <div className="w-10 h-10 rounded-2xl bg-amber-400 p-0.5 shadow-lg shadow-amber-400/20">
+                <div className="w-full h-full bg-slate-900 rounded-[14px] flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-amber-400 fill-amber-400/20" />
                 </div>
               </div>
-              <span className="text-xl font-extrabold text-white">
-                PDFMaster<span className="text-purple-400">Pro</span>
+              <span className="text-xl font-extrabold text-white tracking-tight">
+                PDFMaster<span className="text-amber-400 font-black">Pro</span>
               </span>
             </div>
             <p className="text-xs text-slate-400 max-w-sm leading-relaxed">
-              Every tool you need to merge, split, compress, edit, convert, encrypt and AI summarize PDFs in one platform. 100% Secure, fast, and enterprise ready.
+              Enterprise-grade PDF processing, conversion, security, and AI document intelligence platform. Fast, private, and secure.
             </p>
-            <div className="pt-2 text-xs font-medium text-purple-400">
-              Developed by <span className="font-bold text-white">Suraj Vishwakarma</span>
+            <div className="pt-2 text-xs font-bold text-amber-400">
+              Developed by <span className="font-extrabold text-white">Suraj Vishwakarma</span>
             </div>
           </div>
 
@@ -34,24 +34,24 @@ export default function Footer() {
           <div>
             <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4">PDF Tools</h4>
             <ul className="space-y-2 text-xs text-slate-400">
-              <li><Link href="/tools/merge-pdf" className="hover:text-purple-400 transition-colors">Merge PDF</Link></li>
-              <li><Link href="/tools/split-pdf" className="hover:text-purple-400 transition-colors">Split PDF</Link></li>
-              <li><Link href="/tools/compress-pdf" className="hover:text-purple-400 transition-colors">Compress PDF</Link></li>
-              <li><Link href="/tools/pdf-to-word" className="hover:text-purple-400 transition-colors">PDF to Word</Link></li>
-              <li><Link href="/tools/ai-summarizer" className="hover:text-purple-400 transition-colors">AI PDF Summary</Link></li>
-              <li><Link href="/tools" className="hover:text-purple-400 transition-colors font-semibold text-purple-400">All 30+ Tools →</Link></li>
+              <li><Link href="/tools/merge-pdf" className="hover:text-amber-400 transition-colors">Merge PDF</Link></li>
+              <li><Link href="/tools/split-pdf" className="hover:text-amber-400 transition-colors">Split PDF</Link></li>
+              <li><Link href="/tools/compress-pdf" className="hover:text-purple-400 hover:text-amber-400 transition-colors">Compress PDF</Link></li>
+              <li><Link href="/tools/pdf-to-word" className="hover:text-amber-400 transition-colors">PDF to Word</Link></li>
+              <li><Link href="/tools/ai-summarizer" className="hover:text-amber-400 transition-colors">AI PDF Summary</Link></li>
+              <li><Link href="/tools" className="hover:text-amber-400 transition-colors font-extrabold text-amber-400">All 30+ Tools →</Link></li>
             </ul>
           </div>
 
-          {/* Solutions & Company */}
+          {/* Company */}
           <div>
             <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4">Company</h4>
             <ul className="space-y-2 text-xs text-slate-400">
-              <li><Link href="/about" className="hover:text-purple-400 transition-colors">About Us</Link></li>
-              <li><Link href="/pricing" className="hover:text-purple-400 transition-colors">Pricing Plans</Link></li>
-              <li><Link href="/blog" className="hover:text-purple-400 transition-colors">Blog & Guides</Link></li>
-              <li><Link href="/careers" className="hover:text-purple-400 transition-colors">Careers</Link></li>
-              <li><Link href="/contact" className="hover:text-purple-400 transition-colors">Contact Support</Link></li>
+              <li><Link href="/about" className="hover:text-amber-400 transition-colors">About Us</Link></li>
+              <li><Link href="/pricing" className="hover:text-amber-400 transition-colors">Pricing Plans</Link></li>
+              <li><Link href="/blog" className="hover:text-amber-400 transition-colors">Blog & Guides</Link></li>
+              <li><Link href="/careers" className="hover:text-amber-400 transition-colors">Careers</Link></li>
+              <li><Link href="/contact" className="hover:text-amber-400 transition-colors">Contact Support</Link></li>
             </ul>
           </div>
 
@@ -59,10 +59,9 @@ export default function Footer() {
           <div>
             <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4">Legal & Security</h4>
             <ul className="space-y-2 text-xs text-slate-400">
-              <li><Link href="/privacy" className="hover:text-purple-400 transition-colors">Privacy Policy</Link></li>
-              <li><Link href="/terms" className="hover:text-purple-400 transition-colors">Terms of Service</Link></li>
-              <li><Link href="/refund" className="hover:text-purple-400 transition-colors">Refund Policy</Link></li>
-              <li><Link href="/admin" className="hover:text-purple-400 transition-colors text-indigo-400">Admin Portal</Link></li>
+              <li><Link href="/privacy" className="hover:text-amber-400 transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="hover:text-amber-400 transition-colors">Terms of Service</Link></li>
+              <li><Link href="/refund" className="hover:text-amber-400 transition-colors">Refund Policy</Link></li>
             </ul>
           </div>
 
