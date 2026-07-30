@@ -5,14 +5,16 @@ import Link from 'next/link';
 import { 
   Upload, File, CheckCircle2, Download, Trash2, RotateCw, 
   Lock, Sparkles, Loader2, RefreshCw, AlertCircle, FileText, Image as ImageIcon,
-  Eye, EyeOff, LogIn, Crop, Scissors, Eraser, Wrench
+  Eye, EyeOff, LogIn, Crop, Scissors, Eraser, Wrench, Languages, Code, Columns
 } from 'lucide-react';
 import { 
   mergePDFsClient, imageToPDFClient, rotatePDFClient, watermarkPDFClient, 
   pageNumbersPDFClient, protectPDFClient, splitPDFClient, compressPDFClient,
-  signPDFClient, docToPDFClient, downloadPDFBytes, downloadBlobFile,
-  removePagesClient, cropPDFClient, redactPDFClient, repairPDFClient,
-  unlockPDFClient, aiSummarizePDFClient, aiTranslatePDFClient, pdfToJpgClient
+  signPDFClient, docToPDFClient, excelToPDFClient, htmlToPDFClient, downloadPDFBytes, downloadBlobFile,
+  removePagesClient, organizePDFClient, cropPDFClient, redactPDFClient, repairPDFClient,
+  unlockPDFClient, ocrPDFClient, pdfToJpgClient, pdfToPngClient, pdfToWordClient,
+  pdfToExcelClient, pdfToPowerpointClient, pdfToMarkdownClient, comparePDFClient,
+  aiSummarizePDFClient, aiTranslatePDFClient, editTextPDFClient, highlightPDFClient
 } from '../lib/pdf-engine';
 
 interface PDFEditorSandboxProps {
@@ -26,7 +28,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
   const [progress, setProgress] = useState(0);
   const [processedBytes, setProcessedBytes] = useState<Uint8Array | null>(null);
   const [aiResultText, setAiResultText] = useState<string | null>(null);
-  const [exportedContent, setExportedContent] = useState<{ content: string; name: string; type: string } | null>(null);
+  const [exportedBlob, setExportedBlob] = useState<{ blob: Blob | string; name: string; mime: string } | null>(null);
   const [exportedImages, setExportedImages] = useState<string[] | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -45,10 +47,12 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
   const [rotateAngle, setRotateAngle] = useState(90);
   const [pageRange, setPageRange] = useState('1');
   const [targetLang, setTargetLang] = useState('Spanish');
+  const [customHtmlText, setCustomHtmlText] = useState('<h1>PDFMaster Pro Document</h1><p>Processed live.</p>');
+  const [customEditText, setCustomEditText] = useState('PDFMaster Pro Approved Document');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Check authentication on mount by calling /api/auth/me (reads HttpOnly cookies)
+  // Check authentication on mount
   useEffect(() => {
     const sessionEmail = typeof window !== 'undefined' ? sessionStorage.getItem('pdfmaster_auth_email') : null;
     if (sessionEmail) {
@@ -75,7 +79,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
       setFiles((prev) => [...prev, ...selectedFiles]);
       setProcessedBytes(null);
       setAiResultText(null);
-      setExportedContent(null);
+      setExportedBlob(null);
       setExportedImages(null);
       setErrorMessage(null);
     }
@@ -88,7 +92,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
       setFiles((prev) => [...prev, ...droppedFiles]);
       setProcessedBytes(null);
       setAiResultText(null);
-      setExportedContent(null);
+      setExportedBlob(null);
       setExportedImages(null);
       setErrorMessage(null);
     }
@@ -99,14 +103,14 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
     if (files.length === 1) {
       setProcessedBytes(null);
       setAiResultText(null);
-      setExportedContent(null);
+      setExportedBlob(null);
       setExportedImages(null);
       setErrorMessage(null);
     }
   };
 
   const handleProcess = async () => {
-    if (files.length === 0) return;
+    if (files.length === 0 && toolSlug !== 'html-to-pdf') return;
 
     if (!isAuthenticated) {
       setShowAuthModal(true);
@@ -124,22 +128,30 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
 
       let resultBytes: Uint8Array | null = null;
       const firstFile = files[0];
-      const isImageUpload = firstFile.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|bmp|svg)$/i.test(firstFile.name);
+      if (!firstFile && toolSlug !== 'html-to-pdf') {
+        setIsProcessing(false);
+        return;
+      }
+      const isImageUpload = firstFile ? (firstFile.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|bmp|svg)$/i.test(firstFile.name)) : false;
 
-      if (toolSlug === 'jpg-to-pdf' || isImageUpload) {
+      if (toolSlug === 'jpg-to-pdf' || toolSlug === 'png-to-pdf' || toolSlug === 'webp-to-pdf' || isImageUpload) {
         resultBytes = await imageToPDFClient(files);
-      } else if (toolSlug === 'pdf-to-jpg' || toolSlug === 'pdf-to-image') {
+      } else if (toolSlug === 'pdf-to-jpg') {
         const { images } = await pdfToJpgClient(firstFile);
+        setExportedImages(images);
+      } else if (toolSlug === 'pdf-to-png') {
+        const { images } = await pdfToPngClient(firstFile);
         setExportedImages(images);
       } else if (toolSlug === 'merge-pdf') {
         resultBytes = await mergePDFsClient(files);
-      } else if (toolSlug === 'split-pdf') {
+      } else if (toolSlug === 'split-pdf' || toolSlug === 'extract-pages') {
         resultBytes = await splitPDFClient(firstFile, pageRange);
       } else if (toolSlug === 'remove-pages') {
         const pagesToRemove = pageRange.split(',').map((p) => parseInt(p.trim(), 10)).filter((p) => !isNaN(p));
         resultBytes = await removePagesClient(firstFile, pagesToRemove.length > 0 ? pagesToRemove : [1]);
-      } else if (toolSlug === 'extract-pages') {
-        resultBytes = await splitPDFClient(firstFile, pageRange);
+      } else if (toolSlug === 'organize-pdf') {
+        const order = pageRange.split(',').map((p) => parseInt(p.trim(), 10)).filter((p) => !isNaN(p));
+        resultBytes = await organizePDFClient(firstFile, order);
       } else if (toolSlug === 'crop-pdf') {
         resultBytes = await cropPDFClient(firstFile, 30);
       } else if (toolSlug === 'redact-pdf') {
@@ -150,7 +162,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
         resultBytes = await compressPDFClient(firstFile);
       } else if (toolSlug === 'rotate-pdf') {
         resultBytes = await rotatePDFClient(firstFile, rotateAngle);
-      } else if (toolSlug === 'add-watermark') {
+      } else if (toolSlug === 'add-watermark' || toolSlug === 'watermark-pdf') {
         resultBytes = await watermarkPDFClient(firstFile, watermarkText, {
           fontSize: watermarkSize,
           opacity: watermarkOpacity,
@@ -166,54 +178,58 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
         resultBytes = await protectPDFClient(firstFile, passwordText);
       } else if (toolSlug === 'unlock-pdf') {
         resultBytes = await unlockPDFClient(firstFile, passwordText);
-      } else if (toolSlug.endsWith('-to-pdf')) {
-        resultBytes = await docToPDFClient(firstFile, toolTitle);
+      } else if (toolSlug === 'word-to-pdf') {
+        resultBytes = await docToPDFClient(firstFile, 'WORD to PDF');
+      } else if (toolSlug === 'excel-to-pdf') {
+        resultBytes = await excelToPDFClient(firstFile);
+      } else if (toolSlug === 'powerpoint-to-pdf') {
+        resultBytes = await docToPDFClient(firstFile, 'POWERPOINT to PDF');
+      } else if (toolSlug === 'html-to-pdf') {
+        resultBytes = await htmlToPDFClient(customHtmlText);
       } else if (toolSlug === 'pdf-to-word') {
-        setExportedContent({
-          content: `Document Title: ${firstFile.name}\n\nProcessed by PDFMaster Pro Engine\nDeveloper: Suraj Vishwakarma\n\nContent Payload Extracted from ${firstFile.name}:\n\nExecutive Brief:\nThis document was converted with 99.8% visual layout retention.`,
+        const docxBlob = await pdfToWordClient(firstFile);
+        setExportedBlob({
+          blob: docxBlob,
           name: `${firstFile.name.replace('.pdf', '')}_Converted.docx`,
-          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+          mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         });
       } else if (toolSlug === 'pdf-to-excel') {
-        setExportedContent({
-          content: `Index,Item Name,Quantity,Unit Price,Total\n1,PDFMaster Pro License,1,49.00,49.00\n2,Document OCR Tokens,500,0.10,50.00\n`,
-          name: `${firstFile.name.replace('.pdf', '')}_Data.csv`,
-          type: 'text/csv'
+        const xlsxBytes = await pdfToExcelClient(firstFile);
+        setExportedBlob({
+          blob: new Blob([xlsxBytes as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+          name: `${firstFile.name.replace('.pdf', '')}_Data.xlsx`,
+          mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         });
       } else if (toolSlug === 'pdf-to-powerpoint') {
-        setExportedContent({
-          content: `Slide 1: ${firstFile.name}\nSlide 2: PDFMaster Pro Executive Presentation\nSlide 3: Technical Specifications & Vector Coordinates`,
+        const pptxBlob = await pdfToPowerpointClient(firstFile);
+        setExportedBlob({
+          blob: pptxBlob,
           name: `${firstFile.name.replace('.pdf', '')}_Slides.pptx`,
-          type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+          mime: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
         });
       } else if (toolSlug === 'pdf-to-markdown') {
-        setExportedContent({
-          content: `# ${firstFile.name}\n\n> Extracted via PDFMaster Pro Neural OCR\n\n## Section 1: Document Overview\n- File Name: ${firstFile.name}\n- File Size: ${(firstFile.size/1024).toFixed(2)} KB\n- Developer: Suraj Vishwakarma\n\n© 2026 PDFMaster Pro`,
+        const mdText = await pdfToMarkdownClient(firstFile);
+        setExportedBlob({
+          blob: mdText,
           name: `${firstFile.name.replace('.pdf', '')}.md`,
-          type: 'text/markdown'
+          mime: 'text/markdown',
         });
+      } else if (toolSlug === 'ocr-pdf' || toolSlug === 'ocr-searchable-pdf') {
+        const { pdfBytes, extractedText } = await ocrPDFClient(firstFile);
+        resultBytes = pdfBytes;
+        setAiResultText(`OCR Extracted Text:\n\n${extractedText.substring(0, 500)}...`);
+      } else if (toolSlug === 'compare-pdf') {
+        const f2 = files[1] || firstFile;
+        const { comparisonText, diffPdfBytes } = await comparePDFClient(firstFile, f2);
+        resultBytes = diffPdfBytes;
+        setAiResultText(comparisonText);
+      } else if (toolSlug === 'edit-text') {
+        resultBytes = await editTextPDFClient(firstFile, customEditText);
+      } else if (toolSlug === 'highlight-pdf') {
+        resultBytes = await highlightPDFClient(firstFile);
       } else if (toolSlug === 'ai-summarizer' || toolSlug === 'ai-chat') {
-        try {
-          const aiRes = await fetch('/api/ai', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              filename: firstFile.name,
-              prompt: toolSlug === 'ai-chat' ? 'Analyze document text and provide a concise briefing.' : 'Summarize the document.',
-              mode: toolSlug === 'ai-chat' ? 'chat' : 'summarize',
-            }),
-          });
-          const aiData = await aiRes.json();
-          if (aiData.success && aiData.response) {
-            setAiResultText(aiData.response);
-          } else {
-            const { summary } = await aiSummarizePDFClient(firstFile);
-            setAiResultText(summary);
-          }
-        } catch (e) {
-          const { summary } = await aiSummarizePDFClient(firstFile);
-          setAiResultText(summary);
-        }
+        const { summary } = await aiSummarizePDFClient(firstFile);
+        setAiResultText(summary);
         resultBytes = await rotatePDFClient(firstFile, 0);
       } else if (toolSlug === 'translate-pdf') {
         resultBytes = await aiTranslatePDFClient(firstFile, targetLang);
@@ -231,28 +247,28 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
             const { saveFileToStore } = require('../lib/dashboard-store');
             saveFileToStore({
               id: Date.now().toString(),
-              name: `PDFMasterPro_${toolSlug}_${files[0].name.replace(/\.[^/.]+$/, "")}.pdf`,
+              name: `PDFMasterPro_${toolSlug}_${firstFile.name.replace(/\.[^/.]+$/, "")}.pdf`,
               sizeBytes: resultBytes.byteLength,
               sizeFormatted: `${(resultBytes.byteLength / 1024 / 1024).toFixed(2)} MB`,
               tool: toolTitle,
               date: new Date().toISOString().replace('T', ' ').substring(0, 16),
               isFav: false,
               isTrash: false,
-              pages: files.length
+              pages: files.length || 1
             });
           } catch (e) {
-            console.error('Store update:', e);
+            console.error('Store update notice:', e);
           }
         }
       }, 300);
     } catch (err: any) {
-      console.warn('PDF Engine execution notice:', err);
+      console.warn('PDF Engine execution exception:', err);
       setIsProcessing(false);
       try {
         const fallbackBytes = await rotatePDFClient(files[0], 0);
         setProcessedBytes(fallbackBytes);
       } catch (fallbackErr) {
-        console.error('Fallback renderer:', fallbackErr);
+        setErrorMessage('Failed to process file. Please try again with a valid file format.');
       }
     }
   };
@@ -262,13 +278,13 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
       exportedImages.forEach((img, idx) => {
         const link = document.createElement('a');
         link.href = img;
-        link.download = `${files[0].name.replace(/\.[^/.]+$/, "")}_Page${idx + 1}.jpg`;
+        link.download = `${files[0]?.name.replace(/\.[^/.]+$/, "") || 'page'}_Page${idx + 1}.jpg`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
       });
-    } else if (exportedContent) {
-      downloadBlobFile(exportedContent.content, exportedContent.name, exportedContent.type);
+    } else if (exportedBlob) {
+      downloadBlobFile(exportedBlob.blob, exportedBlob.name, exportedBlob.mime);
     } else if (processedBytes) {
       downloadPDFBytes(processedBytes, `PDFMasterPro_${toolSlug}_Result.pdf`);
     }
@@ -278,7 +294,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
     <div className="w-full max-w-4xl mx-auto space-y-6">
       
       {/* Upload Zone */}
-      {files.length === 0 ? (
+      {files.length === 0 && toolSlug !== 'html-to-pdf' ? (
         <div
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
@@ -289,7 +305,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
             type="file"
             ref={fileInputRef}
             onChange={handleFileChange}
-            multiple={toolSlug === 'merge-pdf' || toolSlug === 'jpg-to-pdf'}
+            multiple={toolSlug === 'merge-pdf' || toolSlug === 'jpg-to-pdf' || toolSlug === 'compare-pdf'}
             accept=".pdf,image/*,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt"
             className="hidden"
           />
@@ -300,7 +316,7 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
             Select files or drop files here
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 max-w-md mx-auto">
-            Supports PDF, JPG, PNG, WEBP, Word, and Excel files up to 50MB. 100% private and secure.
+            Supports PDF, JPG, PNG, WEBP, Word, Excel, and PowerPoint files up to 50MB. 100% private and secure.
           </p>
           <button className="mt-6 px-6 py-3 rounded-2xl bg-amber-400 hover:bg-amber-500 text-slate-900 font-extrabold text-xs shadow-lg shadow-amber-400/20 transition-all cursor-pointer">
             Choose Files
@@ -316,12 +332,14 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
               </h4>
               <p className="text-xs text-slate-500">Ready to execute {toolTitle}</p>
             </div>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer"
-            >
-              + Add More Files
-            </button>
+            {toolSlug !== 'html-to-pdf' && (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer"
+              >
+                + Add More Files
+              </button>
+            )}
             <input
               type="file"
               ref={fileInputRef}
@@ -341,43 +359,73 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
           )}
 
           {/* File Queue List */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
-            {files.map((file, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60"
-              >
-                <div className="flex items-center gap-3 overflow-hidden">
-                  <div className="p-2 rounded-xl bg-amber-400/20 text-amber-500">
-                    {file.type.startsWith('image/') ? <ImageIcon className="w-4 h-4" /> : <File className="w-4 h-4" />}
-                  </div>
-                  <div className="overflow-hidden">
-                    <p className="text-xs font-bold truncate text-slate-800 dark:text-slate-200">{file.name}</p>
-                    <p className="text-[10px] text-slate-400">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => removeFile(i)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors cursor-pointer"
+          {files.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
+              {files.map((file, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60"
                 >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <div className="p-2 rounded-xl bg-amber-400/20 text-amber-500">
+                      {file.type.startsWith('image/') ? <ImageIcon className="w-4 h-4" /> : <File className="w-4 h-4" />}
+                    </div>
+                    <div className="overflow-hidden">
+                      <p className="text-xs font-bold truncate text-slate-800 dark:text-slate-200">{file.name}</p>
+                      <p className="text-[10px] text-slate-400">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => removeFile(i)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
-          {/* Custom Settings Controls per Tool */}
-          {(toolSlug === 'split-pdf' || toolSlug === 'extract-pages' || toolSlug === 'remove-pages') && (
+          {/* Tool Custom Options */}
+          {toolSlug === 'html-to-pdf' && (
             <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2">
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                {toolSlug === 'remove-pages' ? 'Page Numbers to Remove (e.g. 1, 3, 5):' : 'Page Range / Selection (e.g. 1-3 or 2):'}
+                HTML Code or Webpage URL:
+              </label>
+              <textarea
+                rows={4}
+                value={customHtmlText}
+                onChange={(e) => setCustomHtmlText(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white"
+              />
+            </div>
+          )}
+
+          {toolSlug === 'edit-text' && (
+            <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                Text to overlay on PDF:
+              </label>
+              <input
+                type="text"
+                value={customEditText}
+                onChange={(e) => setCustomEditText(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white"
+              />
+            </div>
+          )}
+
+          {(toolSlug === 'split-pdf' || toolSlug === 'extract-pages' || toolSlug === 'remove-pages' || toolSlug === 'organize-pdf') && (
+            <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                {toolSlug === 'remove-pages' ? 'Page Numbers to Remove (e.g. 1, 3, 5):' : 'Page Selection / Range (e.g. 1-3 or 2,4):'}
               </label>
               <input
                 type="text"
                 value={pageRange}
                 onChange={(e) => setPageRange(e.target.value)}
                 placeholder="1-3"
-                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-semibold"
+                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white"
               />
             </div>
           )}
@@ -397,25 +445,22 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
             </div>
           )}
 
-          {toolSlug === 'add-watermark' && (
+          {(toolSlug === 'add-watermark' || toolSlug === 'watermark-pdf') && (
             <div className="p-6 rounded-3xl bg-amber-500/10 border border-amber-500/30 space-y-5">
               <div>
                 <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-amber-500" /> Watermark Stamp Options
                 </h3>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  Stamp custom text or name over all PDF pages with font size, opacity, rotation, and color controls.
-                </p>
               </div>
 
               <div className="space-y-4">
                 <div className="space-y-1">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Watermark Stamp Text / Name</label>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Watermark Text / Stamp Name</label>
                   <input
                     type="text"
                     value={watermarkText}
                     onChange={(e) => setWatermarkText(e.target.value)}
-                    placeholder="Enter watermark text or name..."
+                    placeholder="Enter watermark text..."
                     className="w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 shadow-sm"
                   />
                 </div>
@@ -424,19 +469,14 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
                   <div className="space-y-1">
                     <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400">Font Size</label>
                     <div className="flex gap-1.5">
-                      {[
-                        { label: '24px', val: 24 },
-                        { label: '36px', val: 36 },
-                        { label: '48px', val: 48 },
-                        { label: '64px', val: 64 },
-                      ].map((s) => (
+                      {[24, 36, 48, 64].map((val) => (
                         <button
-                          key={s.val}
+                          key={val}
                           type="button"
-                          onClick={() => setWatermarkSize(s.val)}
-                          className={`flex-1 py-1.5 rounded-xl text-[11px] font-extrabold border transition-all cursor-pointer ${watermarkSize === s.val ? 'bg-amber-400 text-slate-900 border-amber-400 shadow-sm' : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}
+                          onClick={() => setWatermarkSize(val)}
+                          className={`flex-1 py-1.5 rounded-xl text-[11px] font-extrabold border transition-all cursor-pointer ${watermarkSize === val ? 'bg-amber-400 text-slate-900 border-amber-400 shadow-sm' : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}
                         >
-                          {s.val}px
+                          {val}px
                         </button>
                       ))}
                     </div>
@@ -445,19 +485,14 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
                   <div className="space-y-1">
                     <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400">Opacity / Transparency</label>
                     <div className="flex gap-1.5">
-                      {[
-                        { label: '20%', val: 0.20 },
-                        { label: '35%', val: 0.35 },
-                        { label: '60%', val: 0.60 },
-                        { label: '85%', val: 0.85 },
-                      ].map((op) => (
+                      {[0.20, 0.35, 0.60, 0.85].map((val) => (
                         <button
-                          key={op.label}
+                          key={val}
                           type="button"
-                          onClick={() => setWatermarkOpacity(op.val)}
-                          className={`flex-1 py-1.5 rounded-xl text-[11px] font-extrabold border transition-all cursor-pointer ${watermarkOpacity === op.val ? 'bg-amber-400 text-slate-900 border-amber-400 shadow-sm' : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}
+                          onClick={() => setWatermarkOpacity(val)}
+                          className={`flex-1 py-1.5 rounded-xl text-[11px] font-extrabold border transition-all cursor-pointer ${watermarkOpacity === val ? 'bg-amber-400 text-slate-900 border-amber-400 shadow-sm' : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}
                         >
-                          {op.label}
+                          {Math.round(val * 100)}%
                         </button>
                       ))}
                     </div>
@@ -481,36 +516,25 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
 
           {(toolSlug === 'protect-pdf' || toolSlug === 'unlock-pdf') && (
             <div className="p-6 rounded-3xl bg-amber-400/10 border border-amber-400/30 space-y-4">
-              <div>
-                <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
-                  <Lock className="w-5 h-5 text-amber-500" /> {toolSlug === 'protect-pdf' ? 'Protect PDF with Password' : 'Unlock Encrypted PDF'}
-                </h3>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  {toolSlug === 'protect-pdf' ? 'Enter password to encrypt PDF with AES-256' : 'Enter PDF password to decrypt and remove encryption'}
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">PDF Password</label>
-                  <div className="relative flex items-center">
-                    <Lock className="w-4 h-4 text-slate-400 absolute left-3" />
-                    <input
-                      type={showPassword1 ? "text" : "password"}
-                      placeholder="Enter password..."
-                      value={passwordText}
-                      onChange={(e) => setPasswordText(e.target.value)}
-                      className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword1(!showPassword1)}
-                      className="p-1.5 text-slate-400 hover:text-amber-500 absolute right-2.5 cursor-pointer"
-                    >
-                      {showPassword1 ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
+              <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <Lock className="w-5 h-5 text-amber-500" /> {toolSlug === 'protect-pdf' ? 'Protect PDF with Password' : 'Unlock Encrypted PDF'}
+              </h3>
+              <div className="relative flex items-center">
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3" />
+                <input
+                  type={showPassword1 ? "text" : "password"}
+                  placeholder="Enter password..."
+                  value={passwordText}
+                  onChange={(e) => setPasswordText(e.target.value)}
+                  className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword1(!showPassword1)}
+                  className="p-1.5 text-slate-400 hover:text-amber-500 absolute right-2.5 cursor-pointer"
+                >
+                  {showPassword1 ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
           )}
@@ -550,11 +574,11 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
             </div>
           )}
 
-          {/* AI Result Box */}
+          {/* AI / OCR / Diff Result Box */}
           {aiResultText && (
-            <div className="p-4 rounded-2xl bg-slate-900 text-slate-100 border border-slate-700 space-y-2 shadow-lg">
+            <div className="p-4 rounded-2xl bg-slate-900 text-slate-100 border border-slate-700 space-y-2 shadow-lg max-h-80 overflow-y-auto">
               <h5 className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-amber-400" /> AI Document Insight
+                <Sparkles className="w-4 h-4 text-amber-400" /> Document Intelligence Insight
               </h5>
               <p className="text-xs whitespace-pre-line leading-relaxed">{aiResultText}</p>
             </div>
@@ -563,13 +587,13 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
           {/* Action Buttons */}
           <div className="flex items-center justify-between pt-2">
             <button
-              onClick={() => { setFiles([]); setProcessedBytes(null); setAiResultText(null); setExportedContent(null); setExportedImages(null); }}
+              onClick={() => { setFiles([]); setProcessedBytes(null); setAiResultText(null); setExportedBlob(null); setExportedImages(null); }}
               className="text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer"
             >
               Clear All
             </button>
 
-            {!processedBytes && !exportedContent && !exportedImages ? (
+            {!processedBytes && !exportedBlob && !exportedImages ? (
               <button
                 onClick={handleProcess}
                 disabled={isProcessing}
