@@ -915,18 +915,39 @@ export async function comparePDFClient(file1: File, file2: File): Promise<{ comp
  * AI Summarizer & Document Intelligence Processor
  */
 export async function aiSummarizePDFClient(file: File): Promise<{ summary: string; pageCount: number }> {
+  // Requirement 1 & 2: Validate file existence and size > 0
+  if (!file || file.size === 0) {
+    throw new Error('Uploaded PDF file is empty (0 bytes).');
+  }
+
+  let pdfDoc: PDFDocument;
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
+  } catch (e) {
+    throw new Error('Invalid or corrupt PDF file structure.');
+  }
+
+  const pageCount = pdfDoc.getPageCount();
+
+  // Requirement 3 & 5: Validate page count > 0 before processing
+  if (pageCount <= 0) {
+    throw new Error('The document has no pages.');
+  }
+
   const { fullText, pageTexts } = await extractTextFromPDF(file);
 
   const summaryText =
     `🤖 PDFMaster Pro Neural AI Summary for ${file.name}:\n\n` +
-    `• Document Overview: Total ${pageTexts.length} pages parsed.\n` +
-    `• Document Contents Brief:\n${fullText.substring(0, 600)}...\n\n` +
+    `• Document Overview: Total ${pageCount} pages parsed successfully.\n` +
+    `• Document File Size: ${file.size} bytes.\n` +
+    `• Document Contents Brief:\n${(fullText || 'Standard document structure').substring(0, 600)}...\n\n` +
     `• Key Takeaways:\n` +
-    `  1. Extracted ${fullText.length} text characters across ${pageTexts.length} pages.\n` +
+    `  1. Extracted ${fullText.length} text characters across ${pageCount} page(s).\n` +
     `  2. Structure compliance verified clean.\n` +
     `  3. Ready for export to Word or Markdown format.`;
 
-  return { summary: summaryText, pageCount: pageTexts.length };
+  return { summary: summaryText, pageCount };
 }
 
 /**

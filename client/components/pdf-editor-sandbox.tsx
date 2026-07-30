@@ -264,12 +264,8 @@ export default function PDFEditorSandbox({ toolSlug, toolTitle }: PDFEditorSandb
     } catch (err: any) {
       console.warn('PDF Engine execution exception:', err);
       setIsProcessing(false);
-      try {
-        const fallbackBytes = await rotatePDFClient(files[0], 0);
-        setProcessedBytes(fallbackBytes);
-      } catch (fallbackErr) {
-        setErrorMessage('Failed to process file. Please try again with a valid file format.');
-      }
+      setProcessedBytes(null);
+      setErrorMessage(err.message || 'The document has no pages.');
     }
   };
 
